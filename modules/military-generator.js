@@ -525,7 +525,7 @@ window.Military = (function () {
         unitCounts[b.unit]+=1;
       }
     });
-    regiment.unitCounts=unitCounts;
+    return unitCounts;
   }
   return {generate, redraw, getDefaultOptions, getName, generateNote, drawRegiments, drawRegiment, moveRegiment, getTotal, getEmblem,updateUnitCounts};
 })();
