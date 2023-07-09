@@ -633,7 +633,6 @@ class Battle {
   endBattle(winner,loser){
     loser.regiments.forEach((regiment,i)=>{
       regiment.unitCounts=Military.updateUnitCounts(regiment);
-      Military.moveRegiment(regiment, x, y);
       const id = "regiment" + regiment.state + "-" + regiment.i;
       armies.select(`g#${id} > text`).text(Military.getTotal(regiment)); // update reg box
     })
