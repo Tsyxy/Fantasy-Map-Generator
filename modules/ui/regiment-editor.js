@@ -21,7 +21,10 @@ function editRegiment(selector) {
 
   if (modules.editRegiment) return;
   modules.editRegiment = true;
-
+// get regiment data element
+function regiment() {
+  return pack.states[elSelected.dataset.state].military.find(r => r.i == elSelected.dataset.id);
+}
   // add listeners
   document.getElementById("regimentNameRestore").addEventListener("click", restoreName);
   document.getElementById("regimentType").addEventListener("click", changeType);
@@ -31,33 +34,143 @@ function editRegiment(selector) {
   document.getElementById("regimentAttack").addEventListener("click", toggleAttack);
   document.getElementById("regimentRegenerateLegend").addEventListener("click", regenerateLegend);
   document.getElementById("regimentLegend").addEventListener("click", editLegend);
-  document.getElementById("regimentSplit").addEventListener("click", splitRegiment);
+  document.getElementById("regimentSplit").addEventListener("click", splitRegimentTsyxy);
   document.getElementById("regimentAdd").addEventListener("click", toggleAdd);
   document.getElementById("regimentAttach").addEventListener("click", toggleAttach);
   document.getElementById("regimentRemove").addEventListener("click", removeRegiment);
 
-  // get regiment data element
-  function regiment() {
-    return pack.states[elSelected.dataset.state].military.find(r => r.i == elSelected.dataset.id);
+  
+  function distance(a,b){
+    return (a.x-b.x)**2+(a.y-b.y)**2;
   }
-
   function updateRegimentData(regiment) {
     document.getElementById("regimentType").className = regiment.n ? "icon-anchor" : "icon-users";
     document.getElementById("regimentName").value = regiment.name;
     document.getElementById("regimentEmblem").value = regiment.icon;
     const composition = document.getElementById("regimentComposition");
-
-    composition.innerHTML = options.military
-      .map(u => {
-        return `<div data-tip="${capitalize(u.name)} number. Input to change">
-        <div class="label">${capitalize(u.name)}:</div>
-        <input data-u="${u.name}" type="number" min=0 step=1 value="${regiment.u[u.name] || 0}">
-        <i>${u.type}</i></div>`;
-      })
-      .join("");
+    createBatallionAdderInput(regiment);
+    updateLocationOfRegimentElement(regiment);
+    createBatallionCards(regiment);
+    updateComposition(regiment);
 
     composition.querySelectorAll("input").forEach(el => el.addEventListener("change", changeUnit));
+    
+
   }
+
+  function updateComposition(regiment) {
+    const composition = document.getElementById("regimentComposition");
+    composition.innerHTML = options.military
+      .map(u => {
+        if(!regiment.unitCounts[u.name]) return "";
+        return `<div class="batallionName" data-tip="${capitalize(u.name)}">
+      <div style="display:table-cell"> ${regiment.unitCounts[u.name]} batallions of ${capitalize(u.name)}</div>
+       </div>`;
+      })
+      .join("");
+  }
+
+  function createBatallionAdderInput(regiment){
+    const card=document.getElementById("batallionAdder");
+    while(card.firstChild) card.removeChild(card.firstChild);
+    const unitSelector=document.createElement("select");
+    unitSelector.innerHTML=options.military.map(u=>`<option value="${u.name}">${capitalize(u.name)}</option>`).join("");
+    const cultureSelector=document.createElement("select");
+    cultureSelector.innerHTML=pack.cultures.map(c=>`<option value="${c.i}">${c.name}</option>`).join("");
+    const count=document.createElement("input");
+    count.type="number";
+    const button=document.createElement("button");
+    button.innerHTML="Add Batallion(s)";
+    button.onclick=(()=>{
+      console.log(unitSelector.value,count.value,regiment);
+      for(let i=0;i<count.value;i++){
+        addBatallion(options.military.find(u=>u.name===unitSelector.value),regiment,cultureSelector.value);
+      }
+      createBatallionCards(regiment);
+      updateComposition(regiment);
+      Military.drawRegiment(regiment,regiment.state);
+
+    });
+    card.appendChild(cultureSelector);
+    card.appendChild(unitSelector);
+    card.appendChild(count);
+    card.appendChild(button);
+  }
+
+  function updateLocationOfRegimentElement(regiment){
+    const burg=getClosestBurg(regiment);
+    const element=document.getElementById("regimentLocation");
+    element.innerHTML=`<div>Stationed near ${burg}</div>`;
+  }
+
+  function getClosestBurg(regiment){
+    const burgs=pack.burgs.filter(b=>pack.cells.state[b.cell]===regiment.state);
+    let closestBurg=burgs[0];
+    let closestDistance=distance(regiment.x,regiment.y,burgs[0].x,burgs[0].y);
+    burgs.forEach(burg=>{
+      const dist=distance(regiment.x,regiment.y,burg.x,burg.y);
+      if(dist<closestDistance){
+        closestBurg=burg;
+        closestDistance=dist;
+      }
+    });
+    return closestBurg.name;
+  }
+
+
+  function createBatallionCards(regiment) {
+    const cards = document.getElementById("regimentBatallionList");
+    while(cards.firstChild) cards.removeChild(cards.firstChild);
+    regiment.batallions.forEach(batallion => {
+      //in the first row it should have the name of the batallion, in the second row, it should have it's strength, skirmish, schock, melee and armour stats
+      const card = document.createElement("div");
+      card.classList.add("batallionCard");
+      card.innerHTML = `<div class="batallionName">${batallion.icon}${batallion.name}</div><div class="batallionStats">❤️: ${batallion.strength} 🏹: ${batallion.skirmish} 🐴: ${batallion.shock} ⚔️: ${batallion.melee} 🛡️: ${batallion.armor}  🙏: ${pack.religions[batallion.religionID].name}</div>`;
+      cards.appendChild(card);
+    });
+  }
+
+  function addBatallion(unit,regiment,cultureInput){
+    
+    const culture=pack.cultures[cultureInput];
+    console.error("addBatallion",unit,regiment, cultureInput,pack.cultures,culture);
+    const religion=regiment.batallions.length?regiment.batallions[0].religionID:pack.cells.religion[regiment.cell];
+    const batallion={
+      cell: regiment.cell,
+      strength:100, 
+      x:regiment.x, 
+      y:regiment.y, 
+      unit: unit.name,
+      naval:regiment.n, 
+      separate: unit.separate, 
+      type: unit.type,
+      cultureID:culture.i,
+      religionID:religion,
+      inRegiment:true,
+      icon:unit.icon,
+      skirmish:unit.skirmish,
+      melee:unit.melee,
+      shock:unit.shock,
+      armor:unit.armor,
+      name:nameNewBatallion(unit,regiment,culture.i),
+      regiment:regiment
+    }
+    regiment.batallions.push(batallion);
+    if(!regiment.unitCounts[unit.name]) {regiment.unitCounts[unit.name]=0;}
+    regiment.unitCounts[unit.name]+=1;
+    
+  }
+
+  function nameNewBatallion(unit,regiment,cultureID){
+    const province=pack.provinces[pack.cells.province[regiment.cell]];
+    const cultureName=pack.cultures[cultureID].name;
+    const provinceName=province.name;
+    const id=province.unitCounts[unit.name]+1;
+    province.unitCounts[unit.name]+=1;
+    const name=id+'. '+cultureName+" "+unit.name +" batallion of "+provinceName;
+    return name;
+  }
+
 
   function drawBase() {
     const reg = regiment();
@@ -132,15 +245,56 @@ function editRegiment(selector) {
     regiment().icon = elSelected.querySelector(".regimentIcon").innerHTML = emblem;
   }
 
-  function changeUnit() {
-    const u = this.dataset.u;
-    const reg = regiment();
-    reg.u[u] = +this.value || 0;
-    reg.a = d3.sum(Object.values(reg.u));
-    elSelected.querySelector("text").innerHTML = Military.getTotal(reg);
-    if (militaryOverviewRefresh.offsetParent) militaryOverviewRefresh.click();
-    if (regimentsOverviewRefresh.offsetParent) regimentsOverviewRefresh.click();
+  function splitRegimentTsyxy(){
+   
+    const regiment=pack.states[elSelected.dataset.state].military.find(r => r.i == elSelected.dataset.id);
+    if(regiment.batallions.length<2) {
+      tip("Not enough forces to split", false, "error");
+      return;}
+  
+    const military=pack.states[regiment.state].military;
+      
+    const newRegiment=Object.assign({},regiment);
+    const oldRegiment=Object.assign({},regiment);
+    newRegiment.batallions=[];
+    oldRegiment.batallions=[];
+    for(let i=0;i<regiment.batallions.length;i++){
+      if(i%2==0){
+    newRegiment.batallions.push(regiment.batallions[i]);
+    continue;
+    }
+    oldRegiment.batallions.push(regiment.batallions[i]);
   }
+  regiment.batallions=oldRegiment.batallions;
+  regiment.unitCounts=getUnitCounts(regiment);
+  newRegiment.unitCounts=getUnitCounts(newRegiment);
+  newRegiment.i=pack.states[regiment.state].military.length;
+  newRegiment.name=Military.getName(newRegiment, military);
+  newRegiment.icon=Military.getEmblem(newRegiment);
+  newRegiment.x+=5;
+  newRegiment.y+=5;
+  newRegiment.batallions.forEach(batallion=>batallion.regiment=newRegiment);
+  military.push(newRegiment);
+    Military.generateNote(newRegiment, pack.states[regiment.state]); // add legend
+    Military.drawRegiment(newRegiment,regiment.state); // draw new reg below
+    Military.drawRegiment(regiment,regiment.state); // redraw old
+    if (regimentsOverviewRefresh.offsetParent) regimentsOverviewRefresh.click();
+    createBatallionCards(regiment);
+      updateComposition(regiment);
+  }
+  
+
+
+
+  function getUnitCounts(regiment){
+    const unitCounts={};
+    options.military.forEach(unit=>{
+      const batallions=regiment.batallions?.filter(batallion => batallion.unit === unit.name);
+      unitCounts[unit.name]=batallions?.length||0;
+    });
+    return unitCounts;
+  }
+
 
   function splitRegiment() {
     const reg = regiment(),
@@ -171,19 +325,18 @@ function editRegiment(selector) {
       } while (military.find(r => r.x === x && r.y === y));
       return y;
     };
-    const newReg = {
-      a,
-      cell: reg.cell,
-      i,
-      n: reg.n,
-      u: u2,
-      x: reg.x,
-      y: y(reg.x, reg.y),
-      bx: reg.bx,
-      by: reg.by,
-      state,
-      icon: reg.icon
-    };
+    const newReg={
+            n:reg.n,
+            cell:reg.cell,
+            name: getName(reg, military),
+            icon : getEmblem(reg),
+            x:reg.x,
+            y:reg.y,
+            bx:reg.x,
+            by:reg.y,
+            batallions:reg.batallions,
+            unitCounts:unitCounts
+    }
     newReg.name = Military.getName(newReg, military);
     military.push(newReg);
     Military.generateNote(newReg, pack.states[state]); // add legend
@@ -212,11 +365,24 @@ function editRegiment(selector) {
       military = pack.states[state].military;
     const i = military.length ? last(military).i + 1 : 0;
     const n = +(pack.cells.h[cell] < 20); // naval or land
-    const reg = {a: 0, cell, i, n, u: {}, x, y, bx: x, by: y, state, icon: "🛡️"};
-    reg.name = Military.getName(reg, military);
+  const reg={
+    n:n,
+    cell:cell,
+    icon:"🛡️",
+    x:x,
+    y:y,
+    bx:x,
+    by:y,
+    state:state,
+    i:i,
+    batallions:[],
+    unitCounts:{}
+  }
+  reg.name = Military.getName(reg, military);
     military.push(reg);
     Military.generateNote(reg, pack.states[state]); // add legend
     Military.drawRegiment(reg, state);
+    
     if (regimentsOverviewRefresh.offsetParent) regimentsOverviewRefresh.click();
     toggleAdd();
   }
@@ -256,7 +422,7 @@ function editRegiment(selector) {
 
     const attacker = regiment();
     const defender = pack.states[regSelected.dataset.state].military.find(r => r.i == regSelected.dataset.id);
-    if (!attacker.a || !defender.a) {
+    if (!attacker.batallions.length || !defender.batallions.length) {
       tip("Regiment has no troops to battle", false, "error");
       return;
     }
@@ -305,7 +471,8 @@ function editRegiment(selector) {
       viewbox.on("click", clicked).style("cursor", "default");
     }
   }
-
+  
+  
   function attachRegimentOnClick() {
     const target = d3.event.target,
       regSelected = target.parentElement,
@@ -322,19 +489,28 @@ function editRegiment(selector) {
       return;
     }
 
-    const reg = regiment(); // reg to be attached
-    const sel = pack.states[newState].military.find(r => r.i == regSelected.dataset.id); // reg to attach to
+    const attachedRegiment = regiment(); // reg to be attached
+    const targetRegiment = pack.states[newState].military.find(r => r.i == regSelected.dataset.id); // reg to attach to
 
-    for (const unit of options.military) {
-      const u = unit.name;
-      if (reg.u[u]) sel.u[u] ? (sel.u[u] += reg.u[u]) : (sel.u[u] = reg.u[u]);
+    attachedRegiment.batallions.forEach(batallion => {
+      batalion.regiment = targetRegiment;
+      targetRegiment.batallions.push(batallion);
+    });
+    
+    for(const key in attachedRegiment.unitCounts){
+      if(targetRegiment.unitCounts[key]){
+        targetRegiment.unitCounts[key] += attachedRegiment.unitCounts[key];
+      }else{
+        targetRegiment.unitCounts[key] = attachedRegiment.unitCounts[key];
+      }
     }
-    sel.a = d3.sum(Object.values(sel.u)); // reg total
-    regSelected.querySelector("text").innerHTML = Military.getTotal(sel); // update selected reg total text
+
+    
+    regSelected.querySelector("text").innerHTML = Military.getTotal(targetRegiment); // update selected reg total text
 
     // remove attached regiment
     const military = pack.states[oldState].military;
-    military.splice(military.indexOf(reg), 1);
+    military.splice(military.indexOf(attachedRegiment), 1);
     const index = notes.findIndex(n => n.id === elSelected.id);
     if (index != -1) notes.splice(index, 1);
     elSelected.remove();

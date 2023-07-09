@@ -1154,6 +1154,14 @@ window.BurgsAndStates = (function () {
     return adjName ? `${getAdjective(s.name)} ${s.formName}` : `${s.formName} of ${s.name}`;
   };
 
+  function getBatallionCounters(){
+    let counters={};
+    options.military.forEach(unit => {
+      counters[unit.name] = 0;
+    });
+    return counters;
+  };
+
   const generateProvinces = function (regenerate = false, regenerateInLockedStates = false) {
     TIME && console.time("generateProvinces");
     const localSeed = regenerate ? generateSeed() : seed;
@@ -1176,6 +1184,7 @@ window.BurgsAndStates = (function () {
         }
 
         province.i = newId;
+        if(!province.unitCounts) {province.unitCounts = getBatallionCounters();}
         provinces.push(province);
       });
     }
@@ -1224,11 +1233,12 @@ window.BurgsAndStates = (function () {
         const type = getType(center, burg.port);
         const coa = COA.generate(stateBurgs[i].coa, kinship, null, type);
         coa.shield = COA.getShield(c, s.i);
-
+        const batallionCounters=getBatallionCounters();//all are set to 0 initially
         s.provinces.push(provinceId);
-        provinces.push({i: provinceId, state: s.i, center, burg, name, formName, fullName, color, coa});
+        provinces.push({i: provinceId, state: s.i, center, burg, name, formName, fullName, color, coa,unitCounts:batallionCounters});
       }
     });
+    console.log(provinces)
 
     // expand generated provinces
     const queue = new PriorityQueue({comparator: (a, b) => a.p - b.p});
@@ -1363,8 +1373,9 @@ window.BurgsAndStates = (function () {
         const type = getType(center, burgs[burg]?.port);
         const coa = COA.generate(s.coa, kinship, dominion, type);
         coa.shield = COA.getShield(c, s.i);
-
-        provinces.push({i: provinceId, state: s.i, center, burg, name, formName, fullName, color, coa});
+        console.log(coa)
+        const batallionCounters=getBatallionCounters();//all are set to 0 initially
+        provinces.push({i: provinceId, state: s.i, center, burg, name, formName, fullName, color, coa, unitCounts: batallionCounters});
         s.provinces.push(provinceId);
 
         // check if there is a land way within the same state between two cells
