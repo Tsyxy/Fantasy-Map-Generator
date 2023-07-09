@@ -13,26 +13,23 @@ window.Military = (function () {
     const rate = {x: 0, Ally: -0.2, Friendly: -0.1, Neutral: 0, Suspicion: 0.1, Enemy: 1, Unknown: 0, Rival: 0.5, Vassal: 0.5, Suzerain: -0.5};
 
     const stateModifier = {
-      melee: {Nomadic: 0.5, Highland: 1.2, Lake: 1, Naval: 0.7, Hunting: 1.2, River: 1.1},
-      ranged: {Nomadic: 0.9, Highland: 1.3, Lake: 1, Naval: 0.8, Hunting: 2, River: 0.8},
-      mounted: {Nomadic: 2.3, Highland: 0.6, Lake: 0.7, Naval: 0.3, Hunting: 0.7, River: 0.8},
-      machinery: {Nomadic: 0.8, Highland: 1.4, Lake: 1.1, Naval: 1.4, Hunting: 0.4, River: 1.1},
-      naval: {Nomadic: 0.5, Highland: 0.5, Lake: 1.2, Naval: 1.8, Hunting: 0.7, River: 1.2},
-      armored: {Nomadic: 1, Highland: 0.5, Lake: 1, Naval: 1, Hunting: 0.7, River: 1.1},
-      aviation: {Nomadic: 0.5, Highland: 0.5, Lake: 1.2, Naval: 1.2, Hunting: 0.6, River: 1.2},
-      magical: {Nomadic: 1, Highland: 2, Lake: 1, Naval: 1, Hunting: 1, River: 1}
+      private: {Nomadic: 0.5, Highland: 1.2, Lake: 1, Naval: 0.7, Hunting: 1.2, River: 1.1},
+      levy: {Nomadic: 0.9, Highland: 1.3, Lake: 1, Naval: 0.8, Hunting: 2, River: 0.8},
+      regular: {Nomadic: 0.3, Highland: 0.6, Lake: 1.7, Naval: 1.3, Hunting: 0.7, River: 0.8},
+      religious: {Nomadic: 0.3, Highland: 0.6, Lake: 0.7, Naval: 0.3, Hunting: 0.7, River: 0.8},
+      naval: {Nomadic: 0.5, Highland: 0.5, Lake: 1.2, Naval: 1.8, Hunting: 0.7, River: 1.2}
     };
 
     const cellTypeModifier = {
-      nomadic: {melee: 0.2, ranged: 0.5, mounted: 3, machinery: 0.4, naval: 0.3, armored: 1.6, aviation: 1, magical: 0.5},
-      wetland: {melee: 0.8, ranged: 2, mounted: 0.3, machinery: 1.2, naval: 1.0, armored: 0.2, aviation: 0.5, magical: 0.5},
-      highland: {melee: 1.2, ranged: 1.6, mounted: 0.3, machinery: 3, naval: 1.0, armored: 0.8, aviation: 0.3, magical: 2}
+      nomadic: {private: 0.2, levy: 0.5, regular: 0.3, religious: 0.4, naval: 0.3},
+      wetland: {private: 0.8, levy: 2, regular: 0.6, religious: 1.2, naval: 1.0},
+      highland: {private: 1.2, levy: 1.6, regular: 0.6, religious: 3, naval: 1.0}
     };
 
     const burgTypeModifier = {
-      nomadic: {melee: 0.3, ranged: 0.8, mounted: 3, machinery: 0.4, naval: 1.0, armored: 1.6, aviation: 1, magical: 0.5},
-      wetland: {melee: 1, ranged: 1.6, mounted: 0.2, machinery: 1.2, naval: 1.0, armored: 0.2, aviation: 0.5, magical: 0.5},
-      highland: {melee: 1.2, ranged: 2, mounted: 0.3, machinery: 3, naval: 1.0, armored: 0.8, aviation: 0.3, magical: 2}
+      nomadic: {private: 0.3, levy: 0.8, regular: 3, religious: 0.4, naval: 1.0},
+      wetland: {private: 1, levy: 1.6, regular: 1.2, religious: 1.2, naval: 1.0},
+      highland: {private: 1.2, levy: 2, regular: 1.3, religious: 3, naval: 1.0}
     };
 
     valid.forEach(s => {
@@ -51,8 +48,7 @@ window.Military = (function () {
         if (!stateModifier[unit.type]) continue;
 
         let modifier = stateModifier[unit.type][s.type] || 1;
-        if (unit.type === "mounted" && s.formName.includes("Horde")) modifier *= 2;
-        else if (unit.type === "naval" && s.form === "Republic") modifier *= 1.2;
+        if (unit.type === "naval" && s.form === "Republic") modifier *= 1.2;
         s.temp[unit.name] = modifier * s.alert;
       }
     });
@@ -65,54 +61,86 @@ window.Military = (function () {
     };
 
     function passUnitLimits(unit, biome, state, culture, religion) {
-      if (unit.biomes && !unit.biomes.includes(biome)) return false;
-      if (unit.states && !unit.states.includes(state)) return false;
-      if (unit.cultures && !unit.cultures.includes(culture)) return false;
-      if (unit.religions && !unit.religions.includes(religion)) return false;
+      if (unit.biomes && !unit.biomes.includes(biome)){return false;}
+      if (unit.states && !unit.states.includes(state)) {return false;}
+      if (unit.cultures && !unit.cultures.includes(culture)) { return false;}
+      if (unit.religions && !unit.religions.includes(religion)) {return false;}
       return true;
     }
 
     // rural cells
-    for (const i of cells.i) {
-      if (!cells.pop[i]) continue;
-
-      const biome = cells.biome[i];
-      const state = cells.state[i];
-      const culture = cells.culture[i];
-      const religion = cells.religion[i];
+    for (const cellID of cells.i) {
+      if (!cells.pop[cellID]) continue;
+      const biome = cells.biome[cellID];
+      const state = cells.state[cellID];
+      const culture = cells.culture[cellID];
+      const religion = cells.religion[cellID];
 
       const stateObj = states[state];
+      
       if (!state || stateObj.removed) continue;
 
-      let modifier = cells.pop[i] / 100; // basic rural army in percentages
+      let modifier = cells.pop[cellID] / 100; // basic rural army in percentages
       if (culture !== stateObj.culture) modifier = stateObj.form === "Union" ? modifier / 1.2 : modifier / 2; // non-dominant culture
       if (religion !== cells.religion[stateObj.center]) modifier = stateObj.form === "Theocracy" ? modifier / 2.2 : modifier / 1.4; // non-dominant religion
-      if (cells.f[i] !== cells.f[stateObj.center]) modifier = stateObj.type === "Naval" ? modifier / 1.2 : modifier / 1.8; // different landmass
-      const type = getType(i);
-
+      if (cells.f[cellID] !== cells.f[stateObj.center]) modifier = stateObj.type === "Naval" ? modifier / 1.2 : modifier / 1.8; // different landmass
+      const terrainType = getType(cellID);
+      let residual = 0;
       for (const unit of options.military) {
         const perc = +unit.rural;
         if (isNaN(perc) || perc <= 0 || !stateObj.temp[unit.name]) continue;
         if (!passUnitLimits(unit, biome, state, culture, religion)) continue;
-        if (unit.type === "naval" && !cells.haven[i]) continue; // only near-ocean cells create naval units
+        if (unit.type === "naval" && !cells.haven[cellID]) continue; // only near-ocean cells create naval units
 
-        const cellTypeMod = type === "generic" ? 1 : cellTypeModifier[type][unit.type]; // cell specific modifier
-        const army = modifier * perc * cellTypeMod; // rural cell army
-        const total = rn(army * stateObj.temp[unit.name] * populationRate); // total troops
-        if (!total) continue;
-
-        let [x, y] = p[i];
+        const cellTypeMod = terrainType === "generic" ? 1 : cellTypeModifier[terrainType][unit.type]; // cell specific modifier
+        const army = modifier * perc * cellTypeMod/200; // rural cell army
+        let total = residual+(army * stateObj.temp[unit.name] * populationRate); // total troops
+        if (total<1) {residual+=total; continue;}
+        residual=0;
+        let [x, y] = p[cellID];
         let n = 0;
 
         // place naval units to sea
         if (unit.type === "naval") {
-          const haven = cells.haven[i];
+          const haven = cells.haven[cellID];
           [x, y] = p[haven];
           n = 1;
         }
-
-        stateObj.temp.platoons.push({cell: i, a: total, t: total, x, y, u: unit.name, n, s: unit.separate, type: unit.type});
-      }
+        if(total<=1||pack.cells.province[cellID]===0){
+          residual=total;
+          continue;}
+          residual=(residual-1)>0?residual-1:0;
+          if(!stateObj.temp.batallions){
+            stateObj.temp.batallions = [];
+          }
+          try{
+          stateObj.temp.batallions.push({
+            cell: cellID,
+            strength:100, 
+            x, 
+            y, 
+            unit: unit.name,
+            naval:n, 
+            separate: unit.separate, 
+            type: unit.type,
+            cultureID:culture,
+            religionID:religion,
+            inRegiment:false,
+            icon:unit.icon,
+            skirmish:unit.skirmish,
+            melee:unit.melee,
+            shock:unit.shock,
+            armor:unit.armor,
+            provinceID:pack.cells.province[cellID],
+            i:pack.provinces[pack.cells.province[cellID]].unitCounts[unit.name]+1
+          });
+          pack.provinces[pack.cells.province[cellID]].unitCounts[unit.name] += 1;
+        }catch(e){
+          console.warn("PROVINCE: ", pack.cells.province[cellID], "UNIT: ", unit.name)
+          debugger;
+        }
+       
+ }
     }
 
     // burgs
@@ -139,7 +167,7 @@ window.Military = (function () {
         if (unit.type === "naval" && (!b.port || !cells.haven[b.cell])) continue; // only ports create naval units
 
         const mod = type === "generic" ? 1 : burgTypeModifier[type][unit.type]; // cell specific modifier
-        const army = m * perc * mod; // urban cell army
+        const army = m * perc * mod/100; // urban cell army
         const total = rn(army * stateObj.temp[unit.name] * populationRate); // total troops
         if (!total) continue;
 
@@ -152,82 +180,137 @@ window.Military = (function () {
           [x, y] = p[haven];
           n = 1;
         }
+        if(total<=1||pack.cells.province[b.cell]===0){continue;}
+        if(!stateObj.temp.batallions){
+          stateObj.temp.batallions = [];
+        }
+        try{
+          stateObj.temp.batallions.push({
+            cell: b.cell,
+            strength:100, 
+            x, 
+            y, 
+            unit: unit.name,
+            naval:n, 
+            separate: unit.separate, 
+            type: unit.type,
+            cultureID:culture,
+            religionID:religion, 
+            inRegiment:false,
+            icon:unit.icon,
+            skirmish:unit.skirmish,
+            melee:unit.melee,
+            shock:unit.shock,
+            armor:unit.armor,
+            provinceID:pack.cells.province[b.cell],
+            i:pack.provinces[pack.cells.province[b.cell]].unitCounts[unit.name]+1
 
-        stateObj.temp.platoons.push({cell: b.cell, a: total, t: total, x, y, u: unit.name, n, s: unit.separate, type: unit.type});
+        });
+        pack.provinces[pack.cells.province[b.cell]].unitCounts[unit.name] += 1;
+       }catch(e){
+        console.warn("PROVINCE: ", pack.provinces[pack.cells.province[b.cell]], "UNIT: ", unit.name)
+        debugger;
       }
-    }
-
-    const expected = 3 * populationRate; // expected regiment size
-    const mergeable = (n0, n1) => (!n0.s && !n1.s) || n0.u === n1.u; // check if regiments can be merged
+    }} 
+    
+    const expected = 0.3* populationRate; // expected regiment size
 
     // get regiments for each state
-    valid.forEach(s => {
-      s.military = createRegiments(s.temp.platoons, s);
-      delete s.temp; // do not store temp data
+    valid.forEach(state => {
+      //state.military = createRegiments(state.temp.platoons, state);
+      nameBatallions(state.temp.batallions,state);
+    state.military=createRegimentsTsyxy(state.temp.batallions, state);
+    console.log("state.military",state.military,"expected size of regiments: ", expected);
+      delete state.temp; // do not store temp data
     });
 
     redraw();
 
-    function createRegiments(nodes, s) {
-      if (!nodes.length) return [];
-
-      nodes.sort((a, b) => a.a - b.a); // form regiments in cells with most troops
-      const tree = d3.quadtree(
-        nodes,
-        d => d.x,
-        d => d.y
-      );
-
-      nodes.forEach(node => {
-        tree.remove(node);
-        const overlap = tree.find(node.x, node.y, 20);
-        if (overlap && overlap.t && mergeable(node, overlap)) {
-          merge(node, overlap);
-          return;
-        }
-        if (node.t > expected) return;
-        const r = (expected - node.t) / (node.s ? 40 : 20); // search radius
-        const candidates = tree.findAll(node.x, node.y, r);
-        for (const c of candidates) {
-          if (c.t < expected && mergeable(node, c)) {
-            merge(node, c);
-            break;
-          }
-        }
-      });
-
-      // add n0 to n1's ultimate parent
-      function merge(n0, n1) {
-        if (!n1.childen) n1.childen = [n0];
-        else n1.childen.push(n0);
-        if (n0.childen) n0.childen.forEach(n => n1.childen.push(n));
-        n1.t += n0.t;
-        n0.t = 0;
-      }
-
-      // parse regiments data
-      const regiments = nodes
-        .filter(n => n.t)
-        .sort((a, b) => b.t - a.t)
-        .map((r, i) => {
-          const u = {};
-          u[r.u] = r.a;
-          (r.childen || []).forEach(n => (u[n.u] = u[n.u] ? (u[n.u] += n.a) : n.a));
-          return {i, a: r.t, cell: r.cell, x: r.x, y: r.y, bx: r.x, by: r.y, u, n: r.n, name, state: s.i};
-        });
-
-      // generate name for regiments
-      regiments.forEach(r => {
-        r.name = getName(r, regiments);
-        r.icon = getEmblem(r);
-        generateNote(r, s);
-      });
-
-      return regiments;
+    function distance(a,b){
+      return (a.x-b.x)**2+(a.y-b.y)**2;
     }
 
+    
+
+    function createRegimentsTsyxy(batallions, state){
+      if(!batallions?.length){
+        return [];}
+      const regimentBases=[];
+      for(let i=0;i<batallions.length;i++){
+        if(!batallions[i].inRegiment){
+          const regimentBase={
+            batallions:[batallions[i]],
+            i:regimentBases.length,
+            cell:batallions[i].cell,
+            n:batallions[i].naval,
+            x:batallions[i].x,
+            y:batallions[i].y,
+            state:state.i,
+            n:batallions[i].naval,
+          }
+          regimentBases.push(regimentBase)
+        batallions[i].inRegiment=true;
+        const copyBatallions=batallions.filter(b=>!b.inRegiment&&pack.cells.province[b.cell]===pack.cells.province[batallions[i].cell]);
+        copyBatallions.sort((a,b)=>distance(a,batallions[i])-distance(b,batallions[i]));
+          for(let j=0;j<copyBatallions.length;j++){
+        regimentBase.batallions.push(copyBatallions[j]);
+        copyBatallions[j].inRegiment=true;
+        if(regimentBase.batallions.length>=expected){
+        
+          break;}
+          }
+        }
+      }
+      const military=[];
+      if(regimentBases.length){
+        regimentBases.forEach(regimentBase=>{
+
+          const unitCounts={};
+          options.military.forEach(unit=>{
+            const batallions=regimentBase.batallions?.filter(batallion => batallion.unit === unit.name);
+            unitCounts[unit.name]=batallions?.length||0;
+          });
+
+          const realRegiment={
+            n:regimentBase.n,
+            cell:regimentBase.cell,
+            name: getName(regimentBase, regimentBases),
+            icon : getEmblem(regimentBase),
+            x:regimentBase.x,
+            y:regimentBase.y,
+            bx:regimentBase.x,
+            by:regimentBase.y,
+            batallions:regimentBase.batallions,
+            unitCounts:unitCounts,
+            i:regimentBase.i,
+            state:regimentBase.state,
+          }
+          realRegiment.batallions.forEach(batallion=>batallion.regiment=realRegiment);
+          generateNote(realRegiment,pack.states[realRegiment.state]);
+          military.push(realRegiment);
+        });
+      }
+      console.log("military",military);
+      return military;
+    }
+  
     TIME && console.timeEnd("generateMilitaryForces");
   };
+
+  function nameBatallions(batallions,stateObj){
+    if(!batallions||batallions?.length===0){
+      return;}
+    stateObj.provinces.forEach(provinceID=>{
+      const province=pack.provinces[provinceID];
+      const provinceName=province.name;
+    options.military.forEach(unit=>{
+      const filteredBatallions=batallions.filter(b=>(b.unit===unit.name&&provinceID===pack.provinces[b.provinceID].i));
+      filteredBatallions.forEach((batallion)=>{
+        const cultureName=pack.cultures[batallion.cultureID].name;
+        batallion.name=(batallion.i)+'. '+cultureName+' '+unit.name+" batallion of "+provinceName;
+     }); });});
+  }
+
 
   function redraw() {
     const validStates = pack.states.filter(s => s.i && !s.removed);
@@ -241,11 +324,19 @@ window.Military = (function () {
 
   const getDefaultOptions = function () {
     return [
-      {icon: "⚔️", name: "infantry", rural: 0.25, urban: 0.2, crew: 1, power: 1, type: "melee", separate: 0},
+      /*{icon: "⚔️", name: "infantry", rural: 0.25, urban: 0.2, crew: 1, power: 1, type: "melee", separate: 0},
       {icon: "🏹", name: "archers", rural: 0.12, urban: 0.2, crew: 1, power: 1, type: "ranged", separate: 0},
       {icon: "🐴", name: "cavalry", rural: 0.12, urban: 0.03, crew: 2, power: 2, type: "mounted", separate: 0},
       {icon: "💣", name: "artillery", rural: 0, urban: 0.03, crew: 8, power: 12, type: "machinery", separate: 0},
-      {icon: "🌊", name: "fleet", rural: 0, urban: 0.015, crew: 100, power: 50, type: "naval", separate: 1}
+      {icon: "🌊", name: "fleet", rural: 0, urban: 0.015, crew: 100, power: 50, type: "naval", separate: 1},*/
+      //okey so this is how units would look in my version. Most of the properties are the same, but I added a few new ones, and changed some of the old ones.
+      //the power property should be separated into skirmish, shock, melee and armor in every place it is used in the editor.
+      {icon: "🔔", name: "levy", rural: 0.65, urban: 0.015, crew: 1, skirmish:3, shock:2, melee: 4, armor:0, type: "levy", separate: 0},
+      {icon: "⚖️", name: "mounted_levy", rural: 0.25, urban: 0.015, crew: 1, skirmish:5, shock:4, melee: 2, armor:0, type: "levy", separate: 0},
+      {icon: "🛡️", name: "nobles", rural: 0.25, urban: 0.015, crew: 1, skirmish:3, shock:5, melee: 7, armor:3, type: "private", separate: 0},
+      {icon: "🐴", name: "mounted_nobles", rural: 0.25, urban: 0.015, crew: 1, skirmish:3, shock:9, melee: 5, armor:3, type: "private", separate: 0},
+      {icon: "💂", name: "regulars", rural: 0.05, urban: 0.55, crew: 1, skirmish:2, shock:3, melee: 5, armor:2, type: "regular", separate: 0},
+      {icon: "🐎", name: "mounted_regulars", rural: 0.05, urban: 0.25, crew: 1, skirmish:3, shock:7, melee: 6, armor:2, type: "regular", separate: 0},
     ];
   };
 
@@ -310,7 +401,6 @@ window.Military = (function () {
         .attr("fill", baseColor);
     }
     const darkerColor = d3.color(army.attr("fill")).darker().hex();
-
     const g = army
       .append("g")
       .attr("id", "regiment" + s + "-" + reg.i)
@@ -360,54 +450,82 @@ window.Military = (function () {
   };
 
   // utilize si function to make regiment total text fit regiment box
-  const getTotal = reg => (reg.a > (reg.n ? 999 : 99999) ? si(reg.a) : reg.a);
+  const getTotal = (reg )=> {
+    let count=0;
+    for(const key in reg.unitCounts) {
+      count+=reg.unitCounts[key];
+    }
+    return count > (reg.n ? 999 : 99999) ? si(count) : count; }
 
-  const getName = function (r, regiments) {
+  const getName = function (regiment, regiments) {
     const cells = pack.cells;
-    const proper = r.n
+    const proper = regiment.n
       ? null
-      : cells.province[r.cell] && pack.provinces[cells.province[r.cell]]
-      ? pack.provinces[cells.province[r.cell]].name
-      : cells.burg[r.cell] && pack.burgs[cells.burg[r.cell]]
-      ? pack.burgs[cells.burg[r.cell]].name
+      : cells.province[regiment.cell] && pack.provinces[cells.province[regiment.cell]]
+      ? pack.provinces[cells.province[regiment.cell]].name
+      : cells.burg[regiment.cell] && pack.burgs[cells.burg[regiment.cell]]
+      ? pack.burgs[cells.burg[regiment.cell]].name
       : null;
-    const number = nth(regiments.filter(reg => reg.n === r.n && reg.i < r.i).length + 1);
-    const form = r.n ? "Fleet" : "Regiment";
+    const number = nth(regiments.filter(reg => reg.n === regiment.n && reg.i < regiment.i).length + 1);
+    const form = regiment.n ? "Fleet" : "Regiment";
     return `${number}${proper ? ` (${proper}) ` : ` `}${form}`;
   };
 
   // get default regiment emblem
-  const getEmblem = function (r) {
-    if (!r.n && !Object.values(r.u).length) return "🔰"; // "Newbie" regiment without troops
-    if (!r.n && pack.states[r.state].form === "Monarchy" && pack.cells.burg[r.cell] && pack.burgs[pack.cells.burg[r.cell]].capital) return "👑"; // "Royal" regiment based in capital
-    const mainUnit = Object.entries(r.u).sort((a, b) => b[1] - a[1])[0][0]; // unit with more troops in regiment
-    const unit = options.military.find(u => u.name === mainUnit);
-    return unit.icon;
+  const getEmblem = function (regiment) {
+    if (!regiment.n && !Object.values(regiment.batallions).length) return "🔰"; // "Newbie" regiment without troops
+    if (!regiment.n && pack.states[regiment.state].form === "Monarchy" && pack.cells.burg[regiment.cell] && pack.burgs[pack.cells.burg[regiment.cell]].capital) return "👑"; // "Royal" regiment based in capital
+    /*const mainUnit = Object.entries(regiment.u).sort((a, b) => b[1] - a[1])[0][0]; // unit with more troops in regiment
+    const unit = options.military.find(u => u.name === mainUnit);*/
+    //here we shoould search regiment.batallions for the most frequent unit
+    let mostFrequentUnit = options.military[0];
+    let mostFrequentUnitCount = 0;
+    if(regiment.batallions?.length > 0){
+      options.military.forEach(unit => {
+        const count=regiment.batallions.filter(batallion => batallion.unit === unit.name).length;
+        if(count>mostFrequentUnitCount){
+          mostFrequentUnitCount=count;
+          mostFrequentUnit=unit;
+        }
+      });
+    }
+    return mostFrequentUnit.icon;
   };
 
-  const generateNote = function (r, s) {
+  const generateNote = function (regiment, state) {
     const cells = pack.cells;
     const base =
-      cells.burg[r.cell] && pack.burgs[cells.burg[r.cell]]
-        ? pack.burgs[cells.burg[r.cell]].name
-        : cells.province[r.cell] && pack.provinces[cells.province[r.cell]]
-        ? pack.provinces[cells.province[r.cell]].fullName
+      cells.burg[regiment.cell] && pack.burgs[cells.burg[regiment.cell]]
+        ? pack.burgs[cells.burg[regiment.cell]].name
+        : cells.province[regiment.cell] && pack.provinces[cells.province[regiment.cell]]
+        ? pack.provinces[cells.province[regiment.cell]].fullName
         : null;
-    const station = base ? `${r.name} is ${r.n ? "based" : "stationed"} in ${base}. ` : "";
+    const station = base ? `${regiment.name} is ${regiment.n ? "based" : "stationed"} in ${base}. ` : "";
 
-    const composition = r.a
-      ? Object.keys(r.u)
-          .map(t => `— ${t}: ${r.u[t]}`)
+    const composition = regiment.a
+      ? Object.keys(regiment.u)
+          .map(t => `— ${t}: ${regiment.u[t]}`)
           .join("\r\n")
       : null;
-    const troops = composition ? `\r\n\r\nRegiment composition in ${options.year} ${options.eraShort}:\r\n${composition}.` : "";
+    const troops = composition ? `\r\n\r\nRegiment composition in ${options.year} ${options.eraShort}:\r\n${regiment.unitCounts}.` : "";
 
-    const campaign = s.campaigns ? ra(s.campaigns) : null;
+    const campaign = state.campaigns ? ra(state.campaigns) : null;
     const year = campaign ? rand(campaign.start, campaign.end) : gauss(options.year - 100, 150, 1, options.year - 6);
     const conflict = campaign ? ` during the ${campaign.name}` : "";
     const legend = `Regiment was formed in ${year} ${options.era}${conflict}. ${station}${troops}`;
-    notes.push({id: `regiment${s.i}-${r.i}`, name: `${r.icon} ${r.name}`, legend});
+    notes.push({id: `regiment${state.i}-${regiment.i}`, name: `${regiment.icon} ${regiment.name}`, legend});
   };
-
-  return {generate, redraw, getDefaultOptions, getName, generateNote, drawRegiments, drawRegiment, moveRegiment, getTotal, getEmblem};
+  /**updates the regiment.unitCounts property based on the current number of regiments/type */
+  const updateUnitCounts= function (regiment){
+    const unitCounts={};
+    regiment.batallions.forEach(b=>{
+      if(!unitCounts[b.unit]){
+        unitCounts[b.unit]=1;
+      }else{
+        unitCounts[b.unit]+=1;
+      }
+    });
+    regiment.unitCounts=unitCounts;
+  }
+  return {generate, redraw, getDefaultOptions, getName, generateNote, drawRegiments, drawRegiment, moveRegiment, getTotal, getEmblem,updateUnitCounts};
 })();

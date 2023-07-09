@@ -60,20 +60,20 @@ function overviewRegiments(state) {
       if (state !== -1 && s.i !== state) continue; // specific state is selected
 
       for (const r of s.military) {
-        const sortData = options.military.map(u => `data-${u.name}=${r.u[u.name] || 0}`).join(" ");
+        const sortData = options.military.map(u => `data-${u.name}=${r.unitCounts[u.name] || 0}`).join(" ");
         const lineData = options.military
           .map(
-            u => `<div data-type="${u.name}" data-tip="${capitalize(u.name)} units number">${r.u[u.name] || 0}</div>`
+            u => `<div data-type="${u.name}" data-tip="${capitalize(u.name)} units number">${r.unitCounts[u.name] || 0}</div>`
           )
           .join(" ");
 
-        lines += /* html */ `<div class="states" data-id="${r.i}" data-s="${s.i}" data-state="${s.name}" data-name="${r.name}" ${sortData} data-total="${r.a}">
+        lines += /* html */ `<div class="states" data-id="${r.i}" data-s="${s.i}" data-state="${s.name}" data-name="${r.name}" ${sortData} data-total="${r.batallions.length}">
           <fill-box data-tip="${s.fullName}" fill="${s.color}" disabled></fill-box>
           <input data-tip="${s.fullName}" style="width:6em" value="${s.name}" readonly />
           <span data-tip="Regiment's emblem" style="width:1em">${r.icon}</span>
           <input data-tip="Regiment's name" style="width:13em" value="${r.name}" readonly />
           ${lineData}
-          <div data-type="total" data-tip="Total military personnel (not considering crew)" style="font-weight: bold">${r.a}</div>
+          <div data-type="total" data-tip="Total military personnel (not considering crew)" style="font-weight: bold">${r.batallions.length}</div>
           <span data-tip="Edit regiment" onclick="editRegiment('#regiment${s.i}-${r.i}')" class="icon-pencil pointer"></span>
         </div>`;
 
@@ -84,9 +84,9 @@ function overviewRegiments(state) {
     lines += /* html */ `<div id="regimentsTotalLine" class="totalLine" data-tip="Total of all displayed regiments">
       <div style="width: 21em; margin-left: 1em">Regiments: ${regiments.length}</div>
       ${options.military
-        .map(u => `<div style="width:5em">${si(d3.sum(regiments.map(r => r.u[u.name] || 0)))}</div>`)
+        .map(u => `<div style="width:5em">${si(d3.sum(regiments.map(regiment => regiment.unitCounts[u.name] || 0)))}</div>`)
         .join(" ")}
-      <div style="width:5em">${si(d3.sum(regiments.map(r => r.a)))}</div>
+      <div style="width:5em">${si(d3.sum(regiments.map(r => r.batallions.length)))}</div>
     </div>`;
 
     body.insertAdjacentHTML("beforeend", lines);
@@ -193,22 +193,22 @@ function overviewRegiments(state) {
     for (const s of pack.states) {
       if (!s.i || s.removed || !s.military.length) continue;
 
-      for (const r of s.military) {
+      for (const regiment of s.military) {
         data += s.name + ",";
-        data += r.i + ",";
-        data += r.icon + ",";
-        data += r.name + ",";
-        data += units.map(unit => r.u[unit]).join(",") + ",";
+        data += regiment.i + ",";
+        data += regiment.icon + ",";
+        data += regiment.name + ",";
+        data += units.map(unit => regiment.unitCounts[unit]).join(",") + ",";
 
-        data += r.x + ",";
-        data += r.y + ",";
-        data += getLatitude(r.y, 2) + ",";
-        data += getLongitude(r.x, 2) + ",";
+        data += regiment.x + ",";
+        data += regiment.y + ",";
+        data += getLatitude(regiment.y, 2) + ",";
+        data += getLongitude(regiment.x, 2) + ",";
 
-        data += r.bx + ",";
-        data += r.by + ",";
-        data += getLatitude(r.by, 2) + ",";
-        data += getLongitude(r.bx, 2) + "\n";
+        data += regiment.bx + ",";
+        data += regiment.by + ",";
+        data += getLatitude(regiment.by, 2) + ",";
+        data += getLongitude(regiment.bx, 2) + "\n";
       }
     }
 

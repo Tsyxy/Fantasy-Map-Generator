@@ -1,4 +1,587 @@
 "use strict";
+
+const tactics=[{
+  name: "balanced",
+  frontline: 40,
+  leftFlank: 20,
+  rightFlank: 20,
+  skirmish: 10,
+  reserves: 10
+},
+{
+  name: "hellenic",
+  frontline: 45,
+  leftFlank: 10,
+  rightFlank: 30,
+  skirmish: 5,
+  reserves: 10,
+},
+{
+  name: "pincher",
+  frontline: 20,
+  leftFlank: 30,
+  rightFlank: 30,
+  skirmish: 10,
+  reserves: 10,
+},
+{
+  name: "frontal charge",
+  frontline: 80,
+  leftFlank: 10,
+  rightFlank: 10,
+  skirmish: 0,
+  reserves: 0,
+},
+{
+  name: "harassment",
+  skirmish: 80,
+  frontline: 0,
+  leftFlank: 0,
+  rightFlank: 0,
+  reserves: 20,
+},
+{
+  name: "roman",
+  frontline: 40,
+  leftFlank: 10,
+  rightFlank: 10,
+  skirmish: 10,
+  reserves: 30,
+},
+{
+  name: "scythian",
+  frontline: 10,
+  leftFlank: 25,
+  rightFlank: 25,
+  skirmish: 30,
+  reserves: 10,
+},
+{
+  name: "reinforced left",
+  frontline: 30,
+  leftFlank: 40,
+  rightFlank: 10,
+  skirmish: 10,
+  reserves: 10,
+}
+]
+
+
+
+
+class Side {
+  constructor(args/*regiments, distances, morale*/) {
+    this.regiments = args.regiments;
+    this.host=args.root;
+    this.element=document.createElement("div");
+    this.element.classList.add("side");
+    this.host.appendChild(this.element);
+    this.createElements();
+    this.distances = args.distances;
+    this.allBatallions = this.getAllBatallions();
+    this.originalStrength = this.getTotalStrength();
+    this.leftFlank = [];
+    this.rightFlank = [];
+    this.skirmish = [];
+    this.frontline = [];
+    this.reserves = [];
+    this.morale = 100;
+    this.totalSkirmish = this.getTotalSkirmish();
+    this.totalMelee = this.getTotalMelee();
+    this.totalShock = this.getTotalShock();
+    this.tactic=this.getTactic();
+
+    this.deployBatallions();
+
+    
+    console.error("ITT VAGYUNK? ", this);
+  }
+
+  createElements(){
+    this.leftFlankElement=document.createElement("div");
+    this.leftFlankElement.classList.add("leftFlank");
+    this.element.appendChild(this.leftFlankElement);
+    this.rightFlankElement=document.createElement("div");
+    this.rightFlankElement.classList.add("rightFlank");
+    this.element.appendChild(this.rightFlankElement);
+    this.skirmishElement=document.createElement("div");
+    this.skirmishElement.classList.add("skirmish");
+    this.element.appendChild(this.skirmishElement);
+    this.frontlineElement=document.createElement("div");
+    this.frontlineElement.classList.add("frontline");
+    this.element.appendChild(this.frontlineElement);
+    this.reservesElement=document.createElement("div");
+    this.reservesElement.classList.add("reserves");
+    this.element.appendChild(this.reservesElement);
+  }
+
+  createUnitCard(batallion){
+    const unitCard=document.createElement("div");
+    unitCard.classList.add("unitCard");
+    unitCard.innerHTML=`<div class="unitName">${batallion.unit}</div>
+    <div class="unitStrength">❤️:${batallion.strength}</div>
+    <div class="unitSkirmish">🏹:${batallion.skirmish}⚔️:${batallion.melee}</div>
+    <div class="unitShock">🐴:${batallion.shock}🛡️:${batallion.armor}</div>
+   `
+    return unitCard;
+  }
+  
+/**sums the strengths of batallions */
+  getTotalStrength(){
+    let totalStrength=0;
+    this.allBatallions.forEach(batallion=>{
+      totalStrength+=batallion.strength;
+    })
+    return totalStrength;
+  }
+
+  getAllBatallions() {
+    let allBatallions = [];
+    const regimentCompositionElementContainer = document.createElement("div");
+    regimentCompositionElementContainer.classList.add("regimentCompositionContainer");
+    this.element.appendChild(regimentCompositionElementContainer);
+    this.regiments.forEach(regiment => {
+      allBatallions = allBatallions.concat(regiment.batallions);
+      const regimentCompositionElement=this.updateComposition(regiment);
+      console.error("regimentCompositionElement: ", regimentCompositionElement)
+     // regimentCompositionElementContainer.appendChild(regimentCompositionElement);
+    });
+    
+    return allBatallions;
+  
+  }
+
+  updateComposition(regiment) {
+    const composition = document.createElement("div");
+    composition.innerHTML = options.military
+      .map(u => {
+        if(!regiment.unitCounts[u.name]) return "";
+        return `<div class="batallionName" data-tip="${capitalize(u.name)}">
+      <div style="display:table-cell"> ${regiment.unitCounts[u.name]} batallions of ${capitalize(u.name)}</div>
+       </div>`;
+      })
+      .join("");
+      return composition;
+  }
+
+   getTotalSkirmish() {
+    let total=0;
+    if(this.regiments.length){
+    this.regiments.forEach(regiment => {
+      total+=this.getTotalSkirmishOfRegiment(regiment);
+    });}
+    return total;
+  }
+  getTotalSkirmishOfRegiment(regiment){
+    let total=0;
+    regiment.batallions.forEach(batallion => {
+      total+=(batallion.strength/100)*batallion.skirmish;
+    });
+    return total;
+  }
+  getTotalMelee(){
+    let total=0;
+    this.regiments.forEach(regiment => {
+     total+=this.getTotalMeleeOfRegiment(regiment);
+    });
+    return total;
+  }
+getTotalMeleeOfRegiment(regiment){
+    let total=0;
+    regiment.batallions.forEach(batallion => {
+      total+=(batallion.strength/100)*batallion.melee;
+    });
+    return total;
+}
+  getTotalShock(){
+    let total=0;
+    this.regiments.forEach(regiment => {
+     total+=this.getTotalShockOfRegiment(regiment);
+    });
+    return total;
+  }
+
+  getTotalShockOfRegiment(regiment){
+    let total=0;
+    regiment.batallions.forEach(batallion => {
+      total+=(batallion.strength/100)*batallion.shock;
+    });
+    return total;
+  }
+  /**
+   * gets one of the tactics from the tactics array based on the ratio of the total stats of the side and the ratios of the tatics. For that purpouse, it
+   * equates the melee stat with the frontline zone in the tactic, the shock stat with the sum of the flanks in the tactic, the skirmish stat with the skirmish zone and ignores
+   * the reserves of the tactic. It gathers the 3 best matching tactics, and chooses one of them randomly, then returns that tactic.
+   */
+  getTactic(){
+    const totalStats={melee:this.totalMelee,shock:this.totalShock,skirmish:this.totalSkirmish};
+    //let's normalize the totalstats as percentages of the total of all stats
+    const total=totalStats.melee+totalStats.shock+totalStats.skirmish;
+    const normalizedStats={melee:totalStats.melee/total*100,shock:totalStats.shock/total*100,skirmish:totalStats.skirmish/total*100};
+    const matchingTactics=[];
+    tactics.forEach(tactic=>{
+      let differenceSum=0;
+      differenceSum+=Math.abs(tactic.frontline-normalizedStats.melee);
+      differenceSum+=Math.abs(tactic.leftFlank+tactic.rightFlank-normalizedStats.shock);
+      differenceSum+=Math.abs(tactic.skirmish-normalizedStats.skirmish);
+      matchingTactics.push({tactic:tactic,difference:differenceSum});
+    });
+    matchingTactics.sort((a,b)=>a.difference-b.difference);
+    console.log("matcingtactics",matchingTactics)
+    const chosenIndex=Math.floor(Math.random()*3);
+    const chosenTactic=matchingTactics[chosenIndex].tactic;
+
+    return chosenTactic;
+  }
+  
+ 
+
+  /**
+   * Assigns batallions to zones (this.frontline, this.leftFlank, this.rightFlank, this.skirmish, this.reserves) based on the tactic of the side and the stats of the batallions.
+   * Tries to keep the ratio of the batallions as close to the ratio of the zones as possible, and prefers to assign batallions with higher stats to zones with higher ratios.
+   * Also tries to assign batallions with the appropriate stats to the appropriate zones.
+   * 
+   */
+  deployBatallions(){
+    this.allBatallions.forEach(batallion=>{
+      batallion.assigned=false;
+    });
+    //every batallion get's a number for every zone, based on how well it fits the zone and how high the ratio of that batallion is
+    const batallionsWithRatios=[];
+    this.allBatallions.forEach(batallion=>{
+      const statTotal=batallion.melee+batallion.shock+batallion.skirmish;
+      const zones={
+        frontline:this.tactic.frontline*batallion.melee/statTotal,
+        leftFlank:this.tactic.leftFlank*batallion.shock/statTotal,
+        rightFlank:this.tactic.rightFlank*batallion.shock/statTotal,
+        skirmish:this.tactic.skirmish*batallion.skirmish/statTotal,
+        reserves:this.tactic.reserves/3 //to normalize the values and make them comparable
+      };
+      batallionsWithRatios.push({batallion:batallion,zones:zones});
+    });
+    //now go through the zones, in descending order of their ratios, and assign the best fitting batallions to them. If a batallion is already assigned, skip it.
+    let sortedZones=Object.keys(this.tactic).sort((a,b)=>this.tactic[b]-this.tactic[a]);
+    sortedZones=sortedZones.filter(zone=>zone!=="name");
+    console.log("sortedZones: ",sortedZones, batallionsWithRatios);
+    for(let i=0;i<sortedZones.length;i++){
+      const zone=sortedZones[i];
+      batallionsWithRatios.sort((a,b)=>b.zones[zone]-a.zones[zone]);
+      for(let j=0;j<batallionsWithRatios.length;j++){
+        const batallion=batallionsWithRatios[j];
+        if(!batallion.batallion.assigned){
+          this[zone].push(batallion.batallion);
+          batallion.batallion.assigned=zone;
+          const batallionCard=this.createUnitCard(batallion.batallion);
+          batallionCard.style.backgroundColor=pack.states[batallion.batallion.regiment.state].color;
+          this[zone+"Element"].appendChild(batallionCard);
+          /**break, if the current number of batallions in the zone is >=this.allBatallions.length/100*this.tactic[zone] */
+          if(this[zone].length>=this.allBatallions.length/100*this.tactic[zone]){
+            break;
+          }
+        }
+      }
+    }
+  }
+/**removes every batallion card from the zone elements and recreates them based on the assigned property of the batallions */
+  updateBatallionCardsOnScreen(){
+    while(this.frontlineElement.firstChild){
+      this.frontlineElement.removeChild(this.frontlineElement.firstChild);
+    }
+    while(this.leftFlankElement.firstChild){
+      this.leftFlankElement.removeChild(this.leftFlankElement.firstChild);
+    }
+    while(this.rightFlankElement.firstChild){
+      this.rightFlankElement.removeChild(this.rightFlankElement.firstChild);
+    }
+    while(this.skirmishElement.firstChild){
+      this.skirmishElement.removeChild(this.skirmishElement.firstChild);
+    }
+    while(this.reservesElement.firstChild){
+      this.reservesElement.removeChild(this.reservesElement.firstChild);
+    }
+    this.allBatallions.forEach(batallion=>{
+      if(batallion.assigned){
+        const batallionCard=this.createUnitCard(batallion);
+        batallionCard.style.backgroundColor=pack.states[batallion.regiment.state].color;
+        this[batallion.assigned+"Element"].appendChild(batallionCard);
+      }
+    })
+
+  }
+
+/**Get's the enemy side as an argument.
+ * 1. Set all batallions to not moved and not attacked
+ * iterates trough the zones in order of their ratios in the tactic,and handles them one by one.
+ * 
+ * 
+ */
+  doTurn(enemy){
+    let battleEnded=false;
+    this.allBatallions.forEach(batallion=>{
+      if(battleEnded){return;}
+      batallion.attacked=0;
+      batallion.moved=false;
+      if(isNaN(batallion.strength)){
+        console.error("batallion strength is NaN",batallion)
+      }
+    });
+    let sortedZones=Object.keys(this.tactic).sort((a,b)=>this.tactic[b]-this.tactic[a]);
+    sortedZones=sortedZones.filter(zone=>zone!=="name");
+    sortedZones.forEach(zone=>{
+      this["handle"+zone](enemy);
+    })
+    if(this.pullbackDamagedBatallions()&&!battleEnded){
+      Battle.prototype.context.endBattle(enemy,this);
+      battleEnded=true;
+      return;
+    };
+    this.updateBatallionCardsOnScreen();
+  }
+/**
+ * Add 4 strength to all batallions in reserves, and if they are at max strength, exchange them with the most damaged fighting batallion in an other zone.
+ * If there are no batallions that could be exchanged, push the batallion to a position where it's most needed based on the tactic of the army.
+ */
+  handlereserves(enemy){
+    console.log("handling reserves")
+    const copyofReserves=this.reserves.slice();
+   copyofReserves.forEach(batallion=>{
+      batallion.strength+=4;
+      if(batallion.strength>100){
+        batallion.strength=100;}
+        //change places with the most damaged batallion in an other zone
+        this.allBatallions.sort((a,b)=>a.strength-b.strength);
+        for(let i=0;i<this.allBatallions.length;i++){
+          if(this.allBatallions[i].assigned===batallion.assigned||this.allBatallions[i].strength===100){continue;}
+          if(this.allBatallions[i].strength<batallion.strength){
+          const targetZone=this.allBatallions[i].assigned;
+          this[targetZone].push(batallion);
+          batallion.assigned=targetZone;
+          this.allBatallions[i].assigned="reserves";
+          this.reserves.splice(this.reserves.indexOf(batallion),1);
+          this[targetZone].splice(this[targetZone].indexOf(this.allBatallions[i]),1);
+          batallion.moved=true;
+          break;
+        }}
+        const zoneRatios=[];
+        Object.keys(this.tactic).forEach(zone=>{
+          if(zone==="name"||zone==="reserves"){return;}
+          zoneRatios.push({zone:zone,ratio:this.tactic[zone], actualRatio:this[zone].length/this.allBatallions.length*100});
+        });
+        zoneRatios.sort((a,b)=>(b.ratio-b.actualRatio)-(a.ratio-a.actualRatio));
+        this.reserves.splice(this.reserves.indexOf(batallion),1);
+        this[zoneRatios[0].zone].push(batallion);
+
+      
+    });
+  }
+
+
+/**
+ * iterates trhough every batallion in the zone, and attacks the enemy batallion that was attacked the least in this turn,
+ * If there are no batallions in the enemy frontline zone, it attacks the enemy reserves with a huge bonus
+ * @param {*} enemy 
+ */
+handlefrontline(enemy){
+  console.log("frontline")
+  const copyoffrontline=this.frontline.slice();
+  copyoffrontline.forEach(batallion=>{
+    if(batallion.moved){return;}
+    const enemyfrontline=enemy.frontline.slice();
+    const enemyReserves=enemy.reserves.slice();
+      
+      if(enemyfrontline.length>0){
+      const target=enemyfrontline[Math.floor(Math.random()*enemyfrontline.length)];
+      this.attack(batallion,target,1,enemy);
+      return;
+      }
+       const target=enemyReserves[Math.floor(Math.random()*enemyReserves.length)];
+       if(target){
+      this.attack(batallion,target,1.5,enemy);
+      return;
+       }
+       /**choose a random target and apply a great bonus */
+        const randomTarget=enemy.allBatallions[Math.floor(Math.random()*enemy.allBatallions.length)];
+        this.attack(batallion,randomTarget,2,enemy);
+    
+  });
+}
+/**
+ * iterates through every batallion in the zone, and attacks the enemy batallion in the enemy left flank that was attacked the least in this turn,
+ * if there are no enemy left flank, or every batallion in the enemy left flank was attacked twice this turn, it attacks the enemy frontline with a huge bonus. 
+ * If every batallion on the enemy fron line was attacked at least 2 times, it attacks the enemy reserves with an even bigger bonus.
+ * If even that is impossible, chooses a random enemy batallion and get an even bigger bonus.
+ * @param {*} enemy 
+ */
+handleleftFlank(enemy){
+  console.log("left flank");
+  const copyofLeftFlank=this.leftFlank.slice();
+  copyofLeftFlank.forEach(batallion=>{
+    if(batallion.moved){return;}
+    const enemyRightFlank=enemy.rightFlank.slice();
+    const enemyReserves=enemy.reserves.slice();
+    const targetableEnemyRightFlank=enemyRightFlank.filter(batallion=>batallion.attacked<2).sort((a,b)=>a.attacked-b.attacked);
+    if(targetableEnemyRightFlank.length>0){
+      this.attack(batallion,targetableEnemyRightFlank[0],1,enemy);
+      return;
+    }
+    const enemyfrontline=enemy.frontline.slice();
+    const targetableEnemyfrontline=enemyfrontline.filter(batallion=>batallion.attacked<2).sort((a,b)=>a.attacked-b.attacked);
+    if(targetableEnemyfrontline.length>0){
+      this.attack(batallion,targetableEnemyfrontline[0],1.8,enemy);
+      return;
+    }
+    const targetableEnemyReserves=enemyReserves.sort((a,b)=>a.attacked-b.attacked);
+    if(targetableEnemyReserves.length>0){
+      this.attack(batallion,targetableEnemyReserves[0],2.4,enemy);
+      return;
+    }
+    this.attack(batallion,enemy.allBatallions[Math.floor(Math.random()*enemy.allBatallions.length)],3,enemy);
+     
+  });
+
+   
+}
+
+
+/**
+ * iterates through every batallion in the zone, and attacks the enemy batallion in the enemy right flank that was attacked the least in this turn,
+ * if there are no enemy right flank, or every batallion in the enemy right flank was attacked twice this turn, it attacks the enemy frontline with a huge bonus. 
+ * If every batallion on the enemy fron line was attacked at least 2 times, it attacks the enemy reserves with an even bigger bonus.
+ * If even that is impossible, chooses a random enemy batallion and get an even bigger bonus.
+ * @param {*} enemy 
+ */
+handlerightFlank(enemy){
+  console.log("right flank");
+  const copyofRightFlank=this.rightFlank.slice();
+  copyofRightFlank.forEach(batallion=>{
+    if(batallion.moved){return;}
+    const enemyLeftFlank=enemy.leftFlank.slice();
+    
+    const enemyReserves=enemy.reserves.slice();
+    const targetableEnemyLeftFlank=enemyLeftFlank.filter(batallion=>batallion.attacked<2).sort((a,b)=>a.attacked-b.attacked);
+    if(targetableEnemyLeftFlank.length>0){
+      this.attack(batallion,targetableEnemyLeftFlank[0],1,enemy);
+      return;
+    }
+    const enemyfrontline=enemy.frontline.slice();
+    const targetableEnemyfrontline=enemyfrontline.filter(batallion=>batallion.attacked<2).sort((a,b)=>a.attacked-b.attacked);
+    if(targetableEnemyfrontline.length>0){
+      this.attack(batallion,targetableEnemyfrontline[0],1.8,enemy);
+      return;
+    }
+    const targetableEnemyReserves=enemyReserves.sort((a,b)=>a.attacked-b.attacked);
+    if(targetableEnemyReserves.length>0){
+      this.attack(batallion,targetableEnemyReserves[0],2.4,enemy);
+      return;
+    }
+    this.attack(batallion,enemy.allBatallions[Math.floor(Math.random()*enemy.allBatallions.length)],3,enemy);
+     
+  });
+}
+/**targets enemy skirmishers first,
+ * if every enemy skirmisher was attacked at least twice, targets a random enemy with a smaller bonus
+ */
+handleskirmish(enemy){
+  console.log("SKIRMISH")
+  const copyofSkirmish=this.skirmish.slice();
+  copyofSkirmish.forEach(batallion=>{
+    if(batallion.moved){return;}
+    const enemySkirmish=enemy.skirmish.slice();
+    const targetableEnemySkirmish=enemySkirmish.filter(batallion=>batallion.attacked<2).sort((a,b)=>a.attacked-b.attacked);
+    if(targetableEnemySkirmish.length>0){
+      this.attack(batallion,targetableEnemySkirmish[0],1,enemy);
+      return;
+    }
+    this.attack(batallion,enemy.allBatallions[Math.floor(Math.random()*enemy.allBatallions.length)],1.2,enemy);
+     
+  });
+}
+/**if the reserver has place in it (Based on it's ratio in the tactic and the total number of regiment), the most damaged batallions will be sent to the reserves until it's filled */
+pullbackDamagedBatallions(){
+  console.log("PULLBACK")
+  const expectedReserves=this.tactic.reserves/100*this.allBatallions.length;
+  if(this.reserves.length<expectedReserves){
+    this.allBatallions.sort((a,b)=>a.strength-b.strength);
+    for(let i=0; i<expectedReserves-this.reserves.length;i++){
+      if(this.allBatallions[i].assigned==="reserves"){continue;}
+      console.error("PUlling back:", this.allBatallions[i])
+      this.morale--;
+      this[this.allBatallions[i].assigned].splice(this[this.allBatallions[i].assigned].indexOf(this.allBatallions[i]),1);
+      this.reserves.push(this.allBatallions[i]);
+      this.allBatallions[i].assigned="reserves";
+      if(this.morale<=0){
+        console.error("side morale is 0", this);
+       return true;
+      }
+    }
+  }
+}
+
+/**
+ * Both the attacker and the target batallion attack each other, with the attacker getting a bonus from the arguments.
+ * They both roll a six sided dice, and choose their relevant stat to add to the roll, based on the attacker's zone. And add them to the roll. The bonus is applied to the stat, but not the roll.
+ * They both deal damage equal to this sum-the target's armor stat. If the damage is negative, it is set to 0.
+ * If one of the batallions reach 0 strength, it is removed from the zone, from it's regiment, basicly from everywhere.
+ * 
+ * @param {*} attacker 
+ * @param {*} target 
+ * @param {*} bonus 
+ */
+attack(attacker,target,bonus,enemy){
+  if(!attacker||!target){return;}
+  attacker.moved=true;
+  target.attacked++;
+  const attackerRoll=Math.floor(Math.random()*6)+1;
+  const targetRoll=Math.floor(Math.random()*6)+1;
+  const stat=attacker.assigned==="skirmish"?"skirmish":attacker.assigned==="fronline"?"melee":"shock";
+  const attackerDamage=Math.max(0,attackerRoll+attacker[stat]*bonus-target.armor)*attacker.strength/100;
+  const targetDamage=Math.max(0,targetRoll+target[stat]-attacker.armor)*target.strength/100;
+  attacker.strength-=targetDamage;
+  target.strength-=attackerDamage;
+  if(isNaN(attacker.strength)){
+    console.error("batallion strength is NaN",attacker);
+    debugger;}
+    if(isNaN(target.strength)){
+      console.error("batallion strength is NaN",target);
+      debugger;}
+  if(attacker.strength<=0){
+    if(this.removeBatallion(this,attacker)){
+      Battle.prototype.context.endBattle(enemy,this);
+      return;
+    }
+  }
+  if(target.strength<=0){
+    if(this.removeBatallion(enemy,target)){
+      Battle.prototype.context.endBattle(this,enemy);}
+      return;
+  }else if(stat==="skirmish"&&attackerDamage>=2*targetDamage){
+    //move the target to it's regiment's reserves.
+    enemy.reserves.push(target);
+    enemy[target.assigned].splice(enemy[target.assigned].indexOf(target),1);
+  }
+}
+/**deletes a batallion */
+removeBatallion(side,batallion){
+ 
+batallion.regiment.batallions.splice(batallion.regiment.batallions.indexOf(batallion),1);
+side[batallion.assigned].splice(side[batallion.assigned].indexOf(batallion),1);
+side.allBatallions.splice(side.allBatallions.indexOf(batallion),1);
+console.log("batallion removed",side,batallion);
+side.morale-=(100/side.allBatallions.length)+1;
+if(side.allBatallions.length===0){
+  console.error("side has no batallions",side);
+  return true;
+}
+if(side.morale<=0){
+  console.error("side morale is 0",side);
+  return true;
+}
+
+}
+
+
+
+}
 class Battle {
   constructor(attacker, defender) {
     if (customization) return;
@@ -6,33 +589,152 @@ class Battle {
     customization = 13; // enter customization to avoid unwanted dialog closing
 
     Battle.prototype.context = this; // store context
+    $("#battleScreen").dialog({
+      title: this.name,
+      resizable: false,
+      position: {my: "center", at: "center", of: "#map"},
+      close: () => Battle.prototype.context.closeDialogs(),});
     this.iteration = 0;
     this.x = defender.x;
     this.y = defender.y;
+    this.screenElement=document.getElementById("battleScreen");
+    this.clearBattleScreen();
     this.cell = findCell(this.x, this.y);
-    this.attackers = {regiments: [], distances: [], morale: 100, casualties: 0, power: 0};
-    this.defenders = {regiments: [], distances: [], morale: 100, casualties: 0, power: 0};
+    
+    this.defenders =  new Side({regiments: [defender],root:this.screenElement});
+    this.attackers = new Side({regiments: [attacker], root:this.screenElement});
+    this.attackers.element.classList.add("attacker");
+    this.defenders.element.top="50%";
+    this.addCentralTurnButton();
+   // this.addHeaders();
+   // this.doTurn();
+    this.place = this.definePlace();
+    this.name="Battle of "+this.place;
+    console.log("Battle of ", this.place, this.attackers,this.defenders, "CACHED STUFF: ", this.cachedAttackers,this.cachedDefenders);
+   
+  }
 
-    this.addHeaders();
+  addCentralTurnButton(){
+    const button=document.createElement("button");
+    button.innerHTML="Next turn";
+    button.addEventListener("click",this.doTurn.bind(this));
+    this.screenElement.appendChild(button);
+    button.style.position="absolute";
+    button.style.top="50%";
+    button.style.left="50%";
+    button.style.transform="translate(-50%,-50%)";
+
+  }
+/**
+ * Updates the unitcounts and cloese the battle screen.
+ * TODO: MOVE THE LOSING SIDE
+ * TODO: update note of the regiment
+ */
+  endBattle(winner,loser){
+    loser.regiments.forEach((regiment,i)=>{
+      regiment.unitCounts=Military.updateUnitCounts(regiment);
+      Military.moveRegiment(regiment, x, y);
+      const id = "regiment" + regiment.state + "-" + regiment.i;
+      armies.select(`g#${id} > text`).text(Military.getTotal(regiment)); // update reg box
+    })
+    winner.regiments.forEach((regiment,i)=>{
+      regiment.unitCounts=Military.updateUnitCounts(regiment);
+      Military.moveRegiment(regiment, x, y);
+      const id = "regiment" + regiment.state + "-" + regiment.i;
+      armies.select(`g#${id} > text`).text(Military.getTotal(regiment)); // update reg box
+    });
+    tip(`${this.name} is over.`, true, "success", 4000);
+    this.closeScreen();
+  }
+
+  closeScreen() {
+    customization = 0;
+    console.error("CLOSING THE WIONDOW")
+    try{
+    $("#battleScreen").dialog("destroy");
+  }catch(e){
+    console.error("FOR SOME REASON? THE CLOSESCREEN WAS CALLED MULTIPLE TIMES");
+  }}
+
+  cleanData() {
+    delete Battle.prototype.context;
+  }
+  clearBattleScreen(){
+    while(this.screenElement.firstChild){
+      this.screenElement.removeChild(this.screenElement.firstChild);
+    }
+    this.screenElement.style.display="block";
+
+  }
+
+    definePlace() {
+      const cells = pack.cells,
+        i = this.cell;
+      const burg = cells.burg[i] ? pack.burgs[cells.burg[i]].name : null;
+      const getRiver = i => {
+        const river = pack.rivers.find(r => r.i === i);
+        return river.name + " " + river.type;
+      };
+      const river = !burg && cells.r[i] ? getRiver(cells.r[i]) : null;
+      const proper = burg || river ? null : Names.getCulture(cells.culture[this.cell]);
+      return burg ? burg : river ? river : proper;
+    }
+
+    //TODO: add a function to undo the battle and return everything in it to it's original state.
+
+    doTurn(){
+      this.attackers.doTurn(this.defenders);
+      this.defenders.doTurn(this.attackers);
+    }
+
+
+    /*addHeaders() {
+      let headers = "<thead><tr><th></th><th></th>";
+  
+      for (const u of options.military) {
+        const label = capitalize(u.name.replace(/_/g, " "));
+        headers += `<th data-tip="${label}">${u.icon}</th>`;
+      }
+  
+      headers += "<th data-tip='Total military''>Total</th></tr></thead>";
+      battleAttackers.innerHTML = battleDefenders.innerHTML = headers;
+    }*/
+
+   /* updateTable(side) {
+      for (const r of this[side].regiments) {
+        const tbody = document.getElementById("battle" + r.state + "-" + r.i);
+        const battleCasualties = tbody.querySelector(".battleCasualties");
+        const battleSurvivors = tbody.querySelector(".battleSurvivors");
+  
+        let index = 3; // index to find table element easily
+        for (const u of options.military) {
+          battleCasualties.querySelector(`td:nth-child(${index})`).innerHTML = r.casualties[u.name] || 0;
+          battleSurvivors.querySelector(`td:nth-child(${index})`).innerHTML = r.survivors[u.name] || 0;
+          index++;
+        }
+  
+        battleCasualties.querySelector(`td:nth-child(${index})`).innerHTML = d3.sum(Object.values(r.casualties));
+        battleSurvivors.querySelector(`td:nth-child(${index})`).innerHTML = d3.sum(Object.values(r.survivors));
+      }
+      this.updateMorale(side);
+    }*/
+   /* 
     this.addRegiment("attackers", attacker);
     this.addRegiment("defenders", defender);
-    this.place = this.definePlace();
+    
     this.defineType();
     this.name = this.defineName();
-    this.randomize();
-    this.calculateStrength("attackers");
-    this.calculateStrength("defenders");
-    this.getInitialMorale();
+    this.getInitialMorale();*/
 
-    $("#battleScreen").dialog({
+   /* $("#battleScreen").dialog({
       title: this.name,
       resizable: false,
       width: fitContent(),
       position: {my: "center", at: "center", of: "#map"},
       close: () => Battle.prototype.context.cancelResults()
-    });
+    });*/
 
-    if (modules.Battle) return;
+  /*  if (modules.Battle) return;
     modules.Battle = true;
 
     // add listeners
@@ -46,7 +748,7 @@ class Battle {
     document.getElementById("battleNameHide").addEventListener("click", this.hideNameSection);
     document.getElementById("battleAddRegiment").addEventListener("click", this.addSide);
     document.getElementById("battleRoll").addEventListener("click", () => Battle.prototype.context.randomize());
-    document.getElementById("battleRun").addEventListener("click", () => Battle.prototype.context.run());
+    document.getElementById("battleRun").addEventListener("click", () => Battle.prototype.context.rufn());
     document.getElementById("battleApply").addEventListener("click", () => Battle.prototype.context.applyResults());
     document.getElementById("battleCancel").addEventListener("click", () => Battle.prototype.context.cancelResults());
     document.getElementById("battleWiki").addEventListener("click", () => wiki("Battle-Simulator"));
@@ -57,8 +759,13 @@ class Battle {
     document.getElementById("battlePhase_defenders").nextElementSibling.addEventListener("click", ev => Battle.prototype.context.changePhase(ev, "defenders"));
     document.getElementById("battleDie_attackers").addEventListener("click", () => Battle.prototype.context.rollDie("attackers"));
     document.getElementById("battleDie_defenders").addEventListener("click", () => Battle.prototype.context.rollDie("defenders"));
+    */
   }
 
+  
+
+
+/*
   defineType() {
     const attacker = this.attackers.regiments[0];
     const defender = this.defenders.regiments[0];
@@ -91,18 +798,7 @@ class Battle {
     document.getElementById("battlePhase_defenders").nextElementSibling.append(defenders.cloneNode(true));
   }
 
-  definePlace() {
-    const cells = pack.cells,
-      i = this.cell;
-    const burg = cells.burg[i] ? pack.burgs[cells.burg[i]].name : null;
-    const getRiver = i => {
-      const river = pack.rivers.find(r => r.i === i);
-      return river.name + " " + river.type;
-    };
-    const river = !burg && cells.r[i] ? getRiver(cells.r[i]) : null;
-    const proper = burg || river ? null : Names.getCulture(cells.culture[this.cell]);
-    return burg ? burg : river ? river : proper;
-  }
+  
 
   defineName() {
     if (this.type === "field") return "Battle of " + this.place;
@@ -122,50 +818,9 @@ class Battle {
     if (this.type === "air") return "battle";
   }
 
-  addHeaders() {
-    let headers = "<thead><tr><th></th><th></th>";
+ 
 
-    for (const u of options.military) {
-      const label = capitalize(u.name.replace(/_/g, " "));
-      headers += `<th data-tip="${label}">${u.icon}</th>`;
-    }
-
-    headers += "<th data-tip='Total military''>Total</th></tr></thead>";
-    battleAttackers.innerHTML = battleDefenders.innerHTML = headers;
-  }
-
-  addRegiment(side, regiment) {
-    regiment.casualties = Object.keys(regiment.u).reduce((a, b) => ((a[b] = 0), a), {});
-    regiment.survivors = Object.assign({}, regiment.u);
-
-    const state = pack.states[regiment.state];
-    const distance = (Math.hypot(this.y - regiment.by, this.x - regiment.bx) * distanceScaleInput.value) | 0; // distance between regiment and its base
-    const color = state.color[0] === "#" ? state.color : "#999";
-    const icon = `<svg width="1.4em" height="1.4em" style="margin-bottom: -.6em; stroke: #333">
-      <rect x="0" y="0" width="100%" height="100%" fill="${color}"></rect>
-      <text x="0" y="1.04em" style="">${regiment.icon}</text></svg>`;
-    const body = `<tbody id="battle${state.i}-${regiment.i}">`;
-
-    let initial = `<tr class="battleInitial"><td>${icon}</td><td class="regiment" data-tip="${regiment.name}">${regiment.name.slice(0, 24)}</td>`;
-    let casualties = `<tr class="battleCasualties"><td></td><td data-tip="${state.fullName}">${state.fullName.slice(0, 26)}</td>`;
-    let survivors = `<tr class="battleSurvivors"><td></td><td data-tip="Supply line length, affects morale">Distance to base: ${distance} ${distanceUnitInput.value}</td>`;
-
-    for (const u of options.military) {
-      initial += `<td data-tip="Initial forces" style="width: 2.5em; text-align: center">${regiment.u[u.name] || 0}</td>`;
-      casualties += `<td data-tip="Casualties" style="width: 2.5em; text-align: center; color: red">0</td>`;
-      survivors += `<td data-tip="Survivors" style="width: 2.5em; text-align: center; color: green">${regiment.u[u.name] || 0}</td>`;
-    }
-
-    initial += `<td data-tip="Initial forces" style="width: 2.5em; text-align: center">${regiment.a || 0}</td></tr>`;
-    casualties += `<td data-tip="Casualties"  style="width: 2.5em; text-align: center; color: red">0</td></tr>`;
-    survivors += `<td data-tip="Survivors" style="width: 2.5em; text-align: center; color: green">${regiment.a || 0}</td></tr>`;
-
-    const div = side === "attackers" ? battleAttackers : battleDefenders;
-    div.innerHTML += body + initial + casualties + survivors + "</tbody>";
-    this[side].regiments.push(regiment);
-    this[side].distances.push(distance);
-  }
-
+  
   addSide() {
     const body = document.getElementById("regimentSelectorBody");
     const context = Battle.prototype.context;
@@ -283,51 +938,7 @@ class Battle {
     }, {});
   }
 
-  calculateStrength(side) {
-    const scheme = {
-      // field battle phases
-      skirmish: {melee: 0.2, ranged: 2.4, mounted: 0.1, machinery: 3, naval: 1, armored: 0.2, aviation: 1.8, magical: 1.8}, // ranged excel
-      melee: {melee: 2, ranged: 1.2, mounted: 1.5, machinery: 0.5, naval: 0.2, armored: 2, aviation: 0.8, magical: 0.8}, // melee excel
-      pursue: {melee: 1, ranged: 1, mounted: 4, machinery: 0.05, naval: 1, armored: 1, aviation: 1.5, magical: 0.6}, // mounted excel
-      retreat: {melee: 0.1, ranged: 0.01, mounted: 0.5, machinery: 0.01, naval: 0.2, armored: 0.1, aviation: 0.8, magical: 0.05}, // reduced
-
-      // naval battle phases
-      shelling: {melee: 0, ranged: 0.2, mounted: 0, machinery: 2, naval: 2, armored: 0, aviation: 0.1, magical: 0.5}, // naval and machinery excel
-      boarding: {melee: 1, ranged: 0.5, mounted: 0.5, machinery: 0, naval: 0.5, armored: 0.4, aviation: 0, magical: 0.2}, // melee excel
-      chase: {melee: 0, ranged: 0.15, mounted: 0, machinery: 1, naval: 1, armored: 0, aviation: 0.15, magical: 0.5}, // reduced
-      withdrawal: {melee: 0, ranged: 0.02, mounted: 0, machinery: 0.5, naval: 0.1, armored: 0, aviation: 0.1, magical: 0.3}, // reduced
-
-      // siege phases
-      blockade: {melee: 0.25, ranged: 0.25, mounted: 0.2, machinery: 0.5, naval: 0.2, armored: 0.1, aviation: 0.25, magical: 0.25}, // no active actions
-      sheltering: {melee: 0.3, ranged: 0.5, mounted: 0.2, machinery: 0.5, naval: 0.2, armored: 0.1, aviation: 0.25, magical: 0.25}, // no active actions
-      sortie: {melee: 2, ranged: 0.5, mounted: 1.2, machinery: 0.2, naval: 0.1, armored: 0.5, aviation: 1, magical: 1}, // melee excel
-      bombardment: {melee: 0.2, ranged: 0.5, mounted: 0.2, machinery: 3, naval: 1, armored: 0.5, aviation: 1, magical: 1}, // machinery excel
-      storming: {melee: 1, ranged: 0.6, mounted: 0.5, machinery: 1, naval: 0.1, armored: 0.1, aviation: 0.5, magical: 0.5}, // melee excel
-      defense: {melee: 2, ranged: 3, mounted: 1, machinery: 1, naval: 0.1, armored: 1, aviation: 0.5, magical: 1}, // ranged excel
-      looting: {melee: 1.6, ranged: 1.6, mounted: 0.5, machinery: 0.2, naval: 0.02, armored: 0.2, aviation: 0.1, magical: 0.3}, // melee excel
-      surrendering: {melee: 0.1, ranged: 0.1, mounted: 0.05, machinery: 0.01, naval: 0.01, armored: 0.02, aviation: 0.01, magical: 0.03}, // reduced
-
-      // ambush phases
-      surprise: {melee: 2, ranged: 2.4, mounted: 1, machinery: 1, naval: 1, armored: 1, aviation: 0.8, magical: 1.2}, // increased
-      shock: {melee: 0.5, ranged: 0.5, mounted: 0.5, machinery: 0.4, naval: 0.3, armored: 0.1, aviation: 0.4, magical: 0.5}, // reduced
-
-      // langing phases
-      landing: {melee: 0.8, ranged: 0.6, mounted: 0.6, machinery: 0.5, naval: 0.5, armored: 0.5, aviation: 0.5, magical: 0.6}, // reduced
-      flee: {melee: 0.1, ranged: 0.01, mounted: 0.5, machinery: 0.01, naval: 0.5, armored: 0.1, aviation: 0.2, magical: 0.05}, // reduced
-      waiting: {melee: 0.05, ranged: 0.5, mounted: 0.05, machinery: 0.5, naval: 2, armored: 0.05, aviation: 0.5, magical: 0.5}, // reduced
-
-      // air battle phases
-      maneuvering: {melee: 0, ranged: 0.1, mounted: 0, machinery: 0.2, naval: 0, armored: 0, aviation: 1, magical: 0.2}, // aviation
-      dogfight: {melee: 0, ranged: 0.1, mounted: 0, machinery: 0.1, naval: 0, armored: 0, aviation: 2, magical: 0.1} // aviation
-    };
-
-    const forces = this.getJoinedForces(this[side].regiments);
-    const phase = this[side].phase;
-    const adjuster = Math.max(populationRate / 10, 10); // population adjuster, by default 100
-    this[side].power = d3.sum(options.military.map(u => (forces[u.name] || 0) * u.power * scheme[phase][u.type])) / adjuster;
-    const UIvalue = this[side].power ? Math.max(this[side].power | 0, 1) : 0;
-    document.getElementById("battlePower_" + side).innerHTML = UIvalue;
-  }
+  
 
   getInitialMorale() {
     const powerFee = diff => minmax(100 - diff ** 1.5 * 10 + 10, 50, 100);
@@ -346,13 +957,7 @@ class Battle {
     morale.dataset.tip += morale.value;
   }
 
-  randomize() {
-    this.rollDie("attackers");
-    this.rollDie("defenders");
-    this.selectPhase();
-    this.calculateStrength("attackers");
-    this.calculateStrength("defenders");
-  }
+  
 
   rollDie(side) {
     const el = document.getElementById("battleDie_" + side);
@@ -363,250 +968,9 @@ class Battle {
     this[side].die = +el.innerHTML;
   }
 
-  selectPhase() {
-    const i = this.iteration;
-    const morale = [this.attackers.morale, this.defenders.morale];
-    const powerRatio = this.attackers.power / this.defenders.power;
+ 
 
-    const getFieldBattlePhase = () => {
-      const prev = [this.attackers.phase || "skirmish", this.defenders.phase || "skirmish"]; // previous phase
-
-      // chance if moral < 25
-      if (P(1 - morale[0] / 25)) return ["retreat", "pursue"];
-      if (P(1 - morale[1] / 25)) return ["pursue", "retreat"];
-
-      // skirmish phase continuation depends on ranged forces number
-      if (prev[0] === "skirmish" && prev[1] === "skirmish") {
-        const forces = this.getJoinedForces(this.attackers.regiments.concat(this.defenders.regiments));
-        const total = d3.sum(Object.values(forces)); // total forces
-        const ranged =
-          d3.sum(
-            options.military
-              .filter(u => u.type === "ranged")
-              .map(u => u.name)
-              .map(u => forces[u])
-          ) / total; // ranged units
-        if (P(ranged) || P(0.8 - i / 10)) return ["skirmish", "skirmish"];
-      }
-
-      return ["melee", "melee"]; // default option
-    };
-
-    const getNavalBattlePhase = () => {
-      const prev = [this.attackers.phase || "shelling", this.defenders.phase || "shelling"]; // previous phase
-
-      if (prev[0] === "withdrawal") return ["withdrawal", "chase"];
-      if (prev[0] === "chase") return ["chase", "withdrawal"];
-
-      // withdrawal phase when power imbalanced
-      if (!prev[0] === "boarding") {
-        if (powerRatio < 0.5 || (P(this.attackers.casualties) && powerRatio < 1)) return ["withdrawal", "chase"];
-        if (powerRatio > 2 || (P(this.defenders.casualties) && powerRatio > 1)) return ["chase", "withdrawal"];
-      }
-
-      // boarding phase can start from 2nd iteration
-      if (prev[0] === "boarding" || P(i / 10 - 0.1)) return ["boarding", "boarding"];
-
-      return ["shelling", "shelling"]; // default option
-    };
-
-    const getSiegePhase = () => {
-      const prev = [this.attackers.phase || "blockade", this.defenders.phase || "sheltering"]; // previous phase
-      let phase = ["blockade", "sheltering"]; // default phase
-
-      if (prev[0] === "retreat" || prev[0] === "looting") return prev;
-
-      if (P(1 - morale[0] / 30) && powerRatio < 1) return ["retreat", "pursue"]; // attackers retreat chance if moral < 30
-      if (P(1 - morale[1] / 15)) return ["looting", "surrendering"]; // defenders surrendering chance if moral < 15
-
-      if (P((powerRatio - 1) / 2)) return ["storming", "defense"]; // start storm
-
-      if (prev[0] !== "storming") {
-        const machinery = options.military.filter(u => u.type === "machinery").map(u => u.name); // machinery units
-
-        const attackers = this.getJoinedForces(this.attackers.regiments);
-        const machineryA = d3.sum(machinery.map(u => attackers[u]));
-        if (i && machineryA && P(0.9)) phase[0] = "bombardment";
-
-        const defenders = this.getJoinedForces(this.defenders.regiments);
-        const machineryD = d3.sum(machinery.map(u => defenders[u]));
-        if (machineryD && P(0.9)) phase[1] = "bombardment";
-
-        if (i && prev[1] !== "sortie" && machineryD < machineryA && P(0.25) && P(morale[1] / 70)) phase[1] = "sortie"; // defenders sortie
-      }
-
-      return phase;
-    };
-
-    const getAmbushPhase = () => {
-      const prev = [this.attackers.phase || "shock", this.defenders.phase || "surprise"]; // previous phase
-
-      if (prev[1] === "surprise" && P(1 - (powerRatio * i) / 5)) return ["shock", "surprise"];
-
-      // chance if moral < 25
-      if (P(1 - morale[0] / 25)) return ["retreat", "pursue"];
-      if (P(1 - morale[1] / 25)) return ["pursue", "retreat"];
-
-      return ["melee", "melee"]; // default option
-    };
-
-    const getLandingPhase = () => {
-      const prev = [this.attackers.phase || "landing", this.defenders.phase || "defense"]; // previous phase
-
-      if (prev[1] === "waiting") return ["flee", "waiting"];
-      if (prev[1] === "pursue") return ["flee", P(0.3) ? "pursue" : "waiting"];
-      if (prev[1] === "retreat") return ["pursue", "retreat"];
-
-      if (prev[0] === "landing") {
-        const attackers = P(i / 2) ? "melee" : "landing";
-        const defenders = i ? prev[1] : P(0.5) ? "defense" : "shock";
-        return [attackers, defenders];
-      }
-
-      if (P(1 - morale[0] / 40)) return ["flee", "pursue"]; // chance if moral < 40
-      if (P(1 - morale[1] / 25)) return ["pursue", "retreat"]; // chance if moral < 25
-
-      return ["melee", "melee"]; // default option
-    };
-
-    const getAirBattlePhase = () => {
-      const prev = [this.attackers.phase || "maneuvering", this.defenders.phase || "maneuvering"]; // previous phase
-
-      // chance if moral < 25
-      if (P(1 - morale[0] / 25)) return ["retreat", "pursue"];
-      if (P(1 - morale[1] / 25)) return ["pursue", "retreat"];
-
-      if (prev[0] === "maneuvering" && P(1 - i / 10)) return ["maneuvering", "maneuvering"];
-
-      return ["dogfight", "dogfight"]; // default option
-    };
-
-    const phase = (function (type) {
-      switch (type) {
-        case "field":
-          return getFieldBattlePhase();
-        case "naval":
-          return getNavalBattlePhase();
-        case "siege":
-          return getSiegePhase();
-        case "ambush":
-          return getAmbushPhase();
-        case "landing":
-          return getLandingPhase();
-        case "air":
-          return getAirBattlePhase();
-        default:
-          getFieldBattlePhase();
-      }
-    })(this.type);
-
-    this.attackers.phase = phase[0];
-    this.defenders.phase = phase[1];
-
-    const buttonA = document.getElementById("battlePhase_attackers");
-    buttonA.className = "icon-button-" + this.attackers.phase;
-    buttonA.dataset.tip = buttonA.nextElementSibling.querySelector("[data-phase='" + phase[0] + "']").dataset.tip;
-
-    const buttonD = document.getElementById("battlePhase_defenders");
-    buttonD.className = "icon-button-" + this.defenders.phase;
-    buttonD.dataset.tip = buttonD.nextElementSibling.querySelector("[data-phase='" + phase[1] + "']").dataset.tip;
-  }
-
-  run() {
-    // validations
-    if (!this.attackers.power) {
-      tip("Attackers army destroyed", false, "warn");
-      return;
-    }
-    if (!this.defenders.power) {
-      tip("Defenders army destroyed", false, "warn");
-      return;
-    }
-
-    // calculate casualties
-    const attack = this.attackers.power * (this.attackers.die / 10 + 0.4);
-    const defense = this.defenders.power * (this.defenders.die / 10 + 0.4);
-
-    // casualties modifier for phase
-    const phase = {
-      skirmish: 0.1,
-      melee: 0.2,
-      pursue: 0.3,
-      retreat: 0.3,
-      boarding: 0.2,
-      shelling: 0.1,
-      chase: 0.03,
-      withdrawal: 0.03,
-      blockade: 0,
-      sheltering: 0,
-      sortie: 0.1,
-      bombardment: 0.05,
-      storming: 0.2,
-      defense: 0.2,
-      looting: 0.5,
-      surrendering: 0.5,
-      surprise: 0.3,
-      shock: 0.3,
-      landing: 0.3,
-      flee: 0,
-      waiting: 0,
-      maneuvering: 0.1,
-      dogfight: 0.2
-    };
-
-    const casualties = Math.random() * Math.max(phase[this.attackers.phase], phase[this.defenders.phase]); // total casualties, ~10% per iteration
-    const casualtiesA = (casualties * defense) / (attack + defense); // attackers casualties, ~5% per iteration
-    const casualtiesD = (casualties * attack) / (attack + defense); // defenders casualties, ~5% per iteration
-
-    this.calculateCasualties("attackers", casualtiesA);
-    this.calculateCasualties("defenders", casualtiesD);
-    this.attackers.casualties += casualtiesA;
-    this.defenders.casualties += casualtiesD;
-
-    // change morale
-    this.attackers.morale = Math.max(this.attackers.morale - casualtiesA * 100 - 1, 0);
-    this.defenders.morale = Math.max(this.defenders.morale - casualtiesD * 100 - 1, 0);
-
-    // update table values
-    this.updateTable("attackers");
-    this.updateTable("defenders");
-
-    // prepare for next iteration
-    this.iteration += 1;
-    this.selectPhase();
-    this.calculateStrength("attackers");
-    this.calculateStrength("defenders");
-  }
-
-  calculateCasualties(side, casualties) {
-    for (const r of this[side].regiments) {
-      for (const unit in r.u) {
-        const rand = 0.8 + Math.random() * 0.4;
-        const died = Math.min(Pint(r.u[unit] * casualties * rand), r.survivors[unit]);
-        r.casualties[unit] -= died;
-        r.survivors[unit] -= died;
-      }
-    }
-  }
-
-  updateTable(side) {
-    for (const r of this[side].regiments) {
-      const tbody = document.getElementById("battle" + r.state + "-" + r.i);
-      const battleCasualties = tbody.querySelector(".battleCasualties");
-      const battleSurvivors = tbody.querySelector(".battleSurvivors");
-
-      let index = 3; // index to find table element easily
-      for (const u of options.military) {
-        battleCasualties.querySelector(`td:nth-child(${index})`).innerHTML = r.casualties[u.name] || 0;
-        battleSurvivors.querySelector(`td:nth-child(${index})`).innerHTML = r.survivors[u.name] || 0;
-        index++;
-      }
-
-      battleCasualties.querySelector(`td:nth-child(${index})`).innerHTML = d3.sum(Object.values(r.casualties));
-      battleSurvivors.querySelector(`td:nth-child(${index})`).innerHTML = d3.sum(Object.values(r.survivors));
-    }
-    this.updateMorale(side);
-  }
+  
 
   toggleChange(ev) {
     ev.stopPropagation();
@@ -756,4 +1120,5 @@ class Battle {
     });
     delete Battle.prototype.context;
   }
-}
+  */
+
