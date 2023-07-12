@@ -239,7 +239,7 @@ function overviewMilitary() {
   }
 
   function militaryCustomize() {
-    const types = ["levy", "private", "regular", "religious","naval"];
+    const types = ["levy", "private", "regular", "religious"];
     const tableBody = document.getElementById("militaryOptions").querySelector("tbody");
     removeUnitLines();
     options.military.map(unit => addUnitLine(unit));
@@ -251,7 +251,7 @@ function overviewMilitary() {
       position: {my: "center", at: "center", of: "svg"},
       buttons: {
         Apply: applyMilitaryOptions,
-        Add: () => addUnitLine({icon: "🛡️", name: "custom" + militaryOptionsTable.rows.length, rural: 0.2, urban: 0.5, crew: 1, skirmish:1, shock:1,melee:1,armor:1, type: "levy"}),
+        Add: () => addUnitLine({icon: "🛡️", name: "custom" + militaryOptionsTable.rows.length, rural: 0.2, urban: 0.5, crew: 1, skirmish:1, shock:1,melee:1,armor:1, type: "levy",naval:false}),
         Restore: restoreDefaultUnits,
         Cancel: function () {
           $(this).dialog("close");
@@ -306,7 +306,7 @@ function overviewMilitary() {
     }
 
     function addUnitLine(unit) {
-      const {type, icon, name, rural, urban, crew,skirmish, shock,melee,armor, separate} = unit;
+      const {type, icon, name, rural, urban, crew,skirmish, shock,melee,armor, separate,naval} = unit;
       const row = document.createElement("tr");
       const typeOptions = types.map(t => `<option ${type === t ? "selected" : ""} value="${t}">${t}</option>`).join(" ");
 

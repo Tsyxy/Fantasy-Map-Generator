@@ -273,7 +273,7 @@ function regiment() {
   newRegiment.icon=Military.getEmblem(newRegiment);
   newRegiment.x+=5;
   newRegiment.y+=5;
-  newRegiment.batallions.forEach(batallion=>batallion.regiment=newRegiment);
+  newRegiment.batallions.forEach(batallion=>batallion.regiment.i=newRegiment.i);
   military.push(newRegiment);
     Military.generateNote(newRegiment, pack.states[regiment.state]); // add legend
     Military.drawRegiment(newRegiment,regiment.state); // draw new reg below
@@ -493,7 +493,7 @@ function regiment() {
     const targetRegiment = pack.states[newState].military.find(r => r.i == regSelected.dataset.id); // reg to attach to
 
     attachedRegiment.batallions.forEach(batallion => {
-      batalion.regiment = targetRegiment;
+      batalion.regiment = targetRegiment.i;
       targetRegiment.batallions.push(batallion);
     });
     
