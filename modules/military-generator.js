@@ -114,6 +114,7 @@ window.Military = (function () {
             stateObj.temp.batallions = [];
           }
           try{
+            const type=["levy", "private", "regular", "religious"][Math.floor(Math.random()*4)];
           stateObj.temp.batallions.push({
             cell: cellID,
             strength:100, 
@@ -122,7 +123,7 @@ window.Military = (function () {
             unit: unit.name,
             naval:n, 
             separate: unit.separate, 
-            type: unit.type,
+            type: type,
             cultureID:culture,
             religionID:religion,
             inRegiment:false,
@@ -185,6 +186,7 @@ window.Military = (function () {
           stateObj.temp.batallions = [];
         }
         try{
+          const type=["levy", "private", "regular", "religious"][Math.floor(Math.random()*4)];
           stateObj.temp.batallions.push({
             cell: b.cell,
             strength:100, 
@@ -193,7 +195,7 @@ window.Military = (function () {
             unit: unit.name,
             naval:n, 
             separate: unit.separate, 
-            type: unit.type,
+            type: type,
             cultureID:culture,
             religionID:religion, 
             inRegiment:false,
@@ -270,7 +272,7 @@ window.Military = (function () {
             const batallions=regimentBase.batallions?.filter(batallion => batallion.unit === unit.name);
             unitCounts[unit.name]=batallions?.length||0;
           });
-
+          
           const realRegiment={
             n:regimentBase.n,
             cell:regimentBase.cell,
@@ -285,7 +287,7 @@ window.Military = (function () {
             i:regimentBase.i,
             state:regimentBase.state,
           }
-          realRegiment.batallions.forEach(batallion=>batallion.regiment=realRegiment);
+          realRegiment.batallions.forEach(batallion=>batallion.regiment=realRegiment.i);
           generateNote(realRegiment,pack.states[realRegiment.state]);
           military.push(realRegiment);
         });
@@ -331,12 +333,13 @@ window.Military = (function () {
       {icon: "🌊", name: "fleet", rural: 0, urban: 0.015, crew: 100, power: 50, type: "naval", separate: 1},*/
       //okey so this is how units would look in my version. Most of the properties are the same, but I added a few new ones, and changed some of the old ones.
       //the power property should be separated into skirmish, shock, melee and armor in every place it is used in the editor.
-      {icon: "🔔", name: "levy", rural: 0.65, urban: 0.015, crew: 1, skirmish:3, shock:2, melee: 4, armor:0, type: "levy", separate: 0},
-      {icon: "⚖️", name: "mounted_levy", rural: 0.25, urban: 0.015, crew: 1, skirmish:5, shock:4, melee: 2, armor:0, type: "levy", separate: 0},
-      {icon: "🛡️", name: "nobles", rural: 0.25, urban: 0.015, crew: 1, skirmish:3, shock:5, melee: 7, armor:3, type: "private", separate: 0},
-      {icon: "🐴", name: "mounted_nobles", rural: 0.25, urban: 0.015, crew: 1, skirmish:3, shock:9, melee: 5, armor:3, type: "private", separate: 0},
-      {icon: "💂", name: "regulars", rural: 0.05, urban: 0.55, crew: 1, skirmish:2, shock:3, melee: 5, armor:2, type: "regular", separate: 0},
-      {icon: "🐎", name: "mounted_regulars", rural: 0.05, urban: 0.25, crew: 1, skirmish:3, shock:7, melee: 6, armor:2, type: "regular", separate: 0},
+      {icon: "🔔", name: "light spearmen", rural: 0.65, urban: 0.015, crew: 1, skirmish:2, shock:2, melee: 4, armor:0, separate: 0},
+      {icon: "⚖️", name: "raider", rural: 0.25, urban: 0.015, crew: 1, skirmish:5, shock:4, melee: 2, armor:0, separate: 0},
+      {icon: "🛡️", name: "noble", rural: 0.25, urban: 0.015, crew: 1, skirmish:3, shock:5, melee: 7, armor:3, separate: 0},
+      {icon: "🐴", name: "knight", rural: 0.25, urban: 0.015, crew: 1, skirmish:3, shock:9, melee: 5, armor:4, separate: 0},
+      {icon: "💂", name: "heavy infantry", rural: 0.05, urban: 0.55, crew: 1, skirmish:1, shock:4, melee: 8, armor:4, separate: 0},
+      {icon: "🐎", name: "dragoon", rural: 0.05, urban: 0.25, crew: 1, skirmish:5, shock:5, melee: 5, armor:1, separate: 0},
+      {icon: "🏹", name: "skirmisher", rural: 0.05, urban: 0.05, crew: 1, skirmish:7, shock:4, melee: 2, armor:0, separate: 0}
     ];
   };
 

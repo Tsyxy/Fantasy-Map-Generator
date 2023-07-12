@@ -272,7 +272,8 @@ getTotalMeleeOfRegiment(regiment){
           this[zone].push(batallion.batallion);
           batallion.batallion.assigned=zone;
           const batallionCard=this.createUnitCard(batallion.batallion);
-          batallionCard.style.backgroundColor=pack.states[batallion.batallion.regiment.state].color;
+          const regiment=this.regiments.find(regiment=>regiment.i===batallion.batallion.regiment)
+          batallionCard.style.backgroundColor=pack.states[regiment.state].color;
           this[zone+"Element"].appendChild(batallionCard);
           /**break, if the current number of batallions in the zone is >=this.allBatallions.length/100*this.tactic[zone] */
           if(this[zone].length>=this.allBatallions.length/100*this.tactic[zone]){
@@ -302,7 +303,8 @@ getTotalMeleeOfRegiment(regiment){
     this.allBatallions.forEach(batallion=>{
       if(batallion.assigned){
         const batallionCard=this.createUnitCard(batallion);
-        batallionCard.style.backgroundColor=pack.states[batallion.regiment.state].color;
+        const regiment=this.regiments.find(regiment=>regiment.i===batallion.regiment)
+        batallionCard.style.backgroundColor=pack.states[regiment.state].color;
         this[batallion.assigned+"Element"].appendChild(batallionCard);
       }
     })
@@ -338,16 +340,32 @@ getTotalMeleeOfRegiment(regiment){
     this.updateBatallionCardsOnScreen();
   }
 /**
- * Add 4 strength to all batallions in reserves, and if they are at max strength, exchange them with the most damaged fighting batallion in an other zone.
+ * Add 4 strength to all batallions in reserves, and
+ * fill up missing places according to the tactic of the army.
+ * exchange them with the most damaged fighting batallion in an other zone.
  * If there are no batallions that could be exchanged, push the batallion to a position where it's most needed based on the tactic of the army.
  */
   handlereserves(enemy){
     console.log("handling reserves")
     const copyofReserves=this.reserves.slice();
+   let zoneNeeds=this.getZoneNeeds();
    copyofReserves.forEach(batallion=>{
       batallion.strength+=4;
       if(batallion.strength>100){
         batallion.strength=100;}
+      if(zoneNeeds[0]){
+        const targetZone=zoneNeeds[0].zone;
+        this[targetZone].push(batallion);
+        batallion.assigned=targetZone;
+        this.reserves.splice(this.reserves.indexOf(batallion),1);
+        zoneNeeds[0].need--;
+        if(zoneNeeds[0].need===0){
+          zoneNeeds=zoneNeeds.shift();
+        }
+        zoneNeeds?.sort((a,b)=>b.need-a.need);
+        return;
+      }
+      
         //change places with the most damaged batallion in an other zone
         this.allBatallions.sort((a,b)=>a.strength-b.strength);
         for(let i=0;i<this.allBatallions.length;i++){
@@ -373,6 +391,21 @@ getTotalMeleeOfRegiment(regiment){
 
       
     });
+  }
+  /**iterates trhough every zone in the order of their ratios in the tactic, and checks if they have enough batallions based on the total number of batallions, then returns a sorted
+   * list of zones needing batallions with the the number of batallions they need.
+   */
+  getZoneNeeds(){
+    let sortedZones=Object.keys(this.tactic).sort((a,b)=>this.tactic[b]-this.tactic[a]);
+    sortedZones=sortedZones.filter(zone=>zone!=="name");
+    const zoneNeeds=[];
+    sortedZones.forEach(zone=>{
+      if(this[zone].length<this.allBatallions.length/100*this.tactic[zone]){
+        zoneNeeds.push({zone:zone,need:this.allBatallions.length/100*this.tactic[zone]-this[zone].length});
+      }
+    });
+    zoneNeeds.sort((a,b)=>a.need-b.need);
+    return zoneNeeds;
   }
 
 
@@ -562,8 +595,8 @@ attack(attacker,target,bonus,enemy){
 }
 /**deletes a batallion */
 removeBatallion(side,batallion){
- 
-batallion.regiment.batallions.splice(batallion.regiment.batallions.indexOf(batallion),1);
+const regiment=side.regiments.find(regiment=>regiment.i===batallion.regiment);
+regiment.batallions.splice(regiment.batallions.indexOf(batallion),1);
 side[batallion.assigned].splice(side[batallion.assigned].indexOf(batallion),1);
 side.allBatallions.splice(side.allBatallions.indexOf(batallion),1);
 console.log("batallion removed",side,batallion);
@@ -587,7 +620,7 @@ class Battle {
     if (customization) return;
     closeDialogs(".stable");
     customization = 13; // enter customization to avoid unwanted dialog closing
-
+    
     Battle.prototype.context = this; // store context
     $("#battleScreen").dialog({
       title: this.name,
@@ -600,7 +633,7 @@ class Battle {
     this.screenElement=document.getElementById("battleScreen");
     this.clearBattleScreen();
     this.cell = findCell(this.x, this.y);
-    
+    console.log("BIOMES",biomesData,"CELL: ", this.cell);
     this.defenders =  new Side({regiments: [defender],root:this.screenElement});
     this.attackers = new Side({regiments: [attacker], root:this.screenElement});
     this.attackers.element.classList.add("attacker");
