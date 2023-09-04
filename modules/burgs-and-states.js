@@ -1156,7 +1156,7 @@ window.BurgsAndStates = (function () {
 
   function getBatallionCounters(){
     let counters={};
-    options.military.forEach(unit => {
+    options.military?.forEach(unit => {
       counters[unit.name] = 0;
     });
     return counters;

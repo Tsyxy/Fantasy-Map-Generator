@@ -493,7 +493,7 @@ function regiment() {
     const targetRegiment = pack.states[newState].military.find(r => r.i == regSelected.dataset.id); // reg to attach to
 
     attachedRegiment.batallions.forEach(batallion => {
-      batalion.regiment = targetRegiment.i;
+      batallion.regiment = targetRegiment.i;
       targetRegiment.batallions.push(batallion);
     });
     

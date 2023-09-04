@@ -464,6 +464,18 @@ function applyDefaultBiomesSystem() {
     {swamp: 1}
   ];
   const cost = [10, 200, 150, 60, 50, 70, 70, 80, 90, 200, 1000, 5000, 150]; // biome movement cost
+  let combatWidthRankings=[];
+  habitability.forEach((h, index) => {
+    combatWidthRankings.push({value: h/cost[index], index: index});
+    });
+  combatWidthRankings.sort((a, b) => {a.value - b.value});
+  combatWidthRankings.forEach((value, index) => {
+    //for every 10th percentile of the array length, gives 2 more combat width and pushes it into the combatwidth array
+    const combatWidthCalc=2*Math.floor(index/(combatWidthRankings.length/10));
+    combatWidth.push(combatWidthCalc);
+    
+  });
+
   const biomesMartix = [
     // hot ↔ cold [>19°C; <-4°C]; dry ↕ wet
     new Uint8Array([1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 10]),
@@ -484,7 +496,7 @@ function applyDefaultBiomesSystem() {
     icons[i] = parsed;
   }
 
-  return {i: d3.range(0, name.length), name, color, biomesMartix, habitability, iconsDensity, icons, cost};
+  return {i: d3.range(0, name.length), name, color, biomesMartix, habitability, iconsDensity, icons, cost, combatWidth: combatWidth};
 }
 
 function handleZoom(isScaleChanged, isPositionChanged) {

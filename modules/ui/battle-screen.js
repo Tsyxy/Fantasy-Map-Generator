@@ -362,7 +362,9 @@ getTotalMeleeOfRegiment(regiment){
         if(zoneNeeds[0].need===0){
           zoneNeeds=zoneNeeds.shift();
         }
-        zoneNeeds?.sort((a,b)=>b.need-a.need);
+        if(zoneNeeds.length){
+        zoneNeeds.sort((a,b)=>b.need-a.need);
+      }
         return;
       }
       
@@ -416,9 +418,11 @@ getTotalMeleeOfRegiment(regiment){
  */
 handlefrontline(enemy){
   console.log("frontline")
-  const copyoffrontline=this.frontline.slice();
-  copyoffrontline.forEach(batallion=>{
+  const copyofFrontline=this.frontline.slice();
+  for(let i=0;(i<this.combatWidth||i<copyofFrontline.length);i++){
+    const batallion=copyofFrontline[i];
     if(batallion.moved){return;}
+
     const enemyfrontline=enemy.frontline.slice();
     const enemyReserves=enemy.reserves.slice();
       
@@ -436,7 +440,7 @@ handlefrontline(enemy){
         const randomTarget=enemy.allBatallions[Math.floor(Math.random()*enemy.allBatallions.length)];
         this.attack(batallion,randomTarget,2,enemy);
     
-  });
+      }
 }
 /**
  * iterates through every batallion in the zone, and attacks the enemy batallion in the enemy left flank that was attacked the least in this turn,
@@ -448,7 +452,8 @@ handlefrontline(enemy){
 handleleftFlank(enemy){
   console.log("left flank");
   const copyofLeftFlank=this.leftFlank.slice();
-  copyofLeftFlank.forEach(batallion=>{
+  for(let i=0;(i<this.combatWidth/2||i<copyofLeftFlank.length);i++){
+    const batallion=copyofLeftFlank[i];
     if(batallion.moved){return;}
     const enemyRightFlank=enemy.rightFlank.slice();
     const enemyReserves=enemy.reserves.slice();
@@ -470,7 +475,7 @@ handleleftFlank(enemy){
     }
     this.attack(batallion,enemy.allBatallions[Math.floor(Math.random()*enemy.allBatallions.length)],3,enemy);
      
-  });
+  }
 
    
 }
@@ -486,7 +491,8 @@ handleleftFlank(enemy){
 handlerightFlank(enemy){
   console.log("right flank");
   const copyofRightFlank=this.rightFlank.slice();
-  copyofRightFlank.forEach(batallion=>{
+  for(let i=0;(i<this.combatWidth/2||i<copyofRightFlank.length);i++){
+    const batallion=copyofRightFlank[i];
     if(batallion.moved){return;}
     const enemyLeftFlank=enemy.leftFlank.slice();
     
@@ -509,7 +515,7 @@ handlerightFlank(enemy){
     }
     this.attack(batallion,enemy.allBatallions[Math.floor(Math.random()*enemy.allBatallions.length)],3,enemy);
      
-  });
+  }
 }
 /**targets enemy skirmishers first,
  * if every enemy skirmisher was attacked at least twice, targets a random enemy with a smaller bonus
@@ -517,7 +523,8 @@ handlerightFlank(enemy){
 handleskirmish(enemy){
   console.log("SKIRMISH")
   const copyofSkirmish=this.skirmish.slice();
-  copyofSkirmish.forEach(batallion=>{
+  for(let i=0;(i<this.combatWidth/2||i<copyofSkirmish.length);i++){
+    const batallion=copyofSkirmish[i];
     if(batallion.moved){return;}
     const enemySkirmish=enemy.skirmish.slice();
     const targetableEnemySkirmish=enemySkirmish.filter(batallion=>batallion.attacked<2).sort((a,b)=>a.attacked-b.attacked);
@@ -527,7 +534,7 @@ handleskirmish(enemy){
     }
     this.attack(batallion,enemy.allBatallions[Math.floor(Math.random()*enemy.allBatallions.length)],1.2,enemy);
      
-  });
+  }
 }
 /**if the reserver has place in it (Based on it's ratio in the tactic and the total number of regiment), the most damaged batallions will be sent to the reserves until it's filled */
 pullbackDamagedBatallions(){
@@ -626,7 +633,7 @@ class Battle {
       title: this.name,
       resizable: false,
       position: {my: "center", at: "center", of: "#map"},
-      close: () => Battle.prototype.context.closeDialogs(),});
+      close: () => this.closeScreen(),});
     this.iteration = 0;
     this.x = defender.x;
     this.y = defender.y;
@@ -634,6 +641,9 @@ class Battle {
     this.clearBattleScreen();
     this.cell = findCell(this.x, this.y);
     console.log("BIOMES",biomesData,"CELL: ", this.cell);
+    
+    this.combatWidth=this.getCombatWidth();
+    
     this.defenders =  new Side({regiments: [defender],root:this.screenElement});
     this.attackers = new Side({regiments: [attacker], root:this.screenElement});
     this.attackers.element.classList.add("attacker");
@@ -645,6 +655,17 @@ class Battle {
     this.name="Battle of "+this.place;
     console.log("Battle of ", this.place, this.attackers,this.defenders, "CACHED STUFF: ", this.cachedAttackers,this.cachedDefenders);
    
+  }
+
+  /**
+   * Combat width is calculated from the habitability and the cost of the biome. Having a high habitability and a low cost means that the biome is easy to fight in, 
+   * and the combat width is high.
+   */
+  getCombatWidth(){
+    const calculatedWidth=biomesData.combatWidth[pack.cells.biome[this.cell]];
+    console.error("COMBAT WIDTH",calculatedWidth);
+    return calculatedWidth;
+
   }
 
   addCentralTurnButton(){
