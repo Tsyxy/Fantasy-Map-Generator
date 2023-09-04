@@ -464,6 +464,7 @@ function applyDefaultBiomesSystem() {
     {swamp: 1}
   ];
   const cost = [10, 200, 150, 60, 50, 70, 70, 80, 90, 200, 1000, 5000, 150]; // biome movement cost
+  const combatWidth=[];
   let combatWidthRankings=[];
   habitability.forEach((h, index) => {
     combatWidthRankings.push({value: h/cost[index], index: index});
