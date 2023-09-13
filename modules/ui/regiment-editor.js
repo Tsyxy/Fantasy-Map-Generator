@@ -82,13 +82,15 @@ function regiment() {
     const button=document.createElement("button");
     button.innerHTML="Add Batallion(s)";
     button.onclick=(()=>{
-      console.log(unitSelector.value,count.value,regiment);
       for(let i=0;i<count.value;i++){
         addBatallion(options.military.find(u=>u.name===unitSelector.value),regiment,cultureSelector.value);
       }
       createBatallionCards(regiment);
       updateComposition(regiment);
-      Military.drawRegiment(regiment,regiment.state);
+      const military=pack.states[regiment.state].military;
+      console.log(regiment,pack.states[elSelected.dataset.state].military.find(r => r.i == elSelected.dataset.id), military);
+      Military.redraw();
+      console.log(regiment, pack.states[elSelected.dataset.state].military.find(r => r.i == elSelected.dataset.id),military);
 
     });
     card.appendChild(cultureSelector);
@@ -153,7 +155,7 @@ function regiment() {
       shock:unit.shock,
       armor:unit.armor,
       name:nameNewBatallion(unit,regiment,culture.i),
-      regiment:regiment
+      regiment:regiment.i
     }
     regiment.batallions.push(batallion);
     if(!regiment.unitCounts[unit.name]) {regiment.unitCounts[unit.name]=0;}
@@ -422,6 +424,7 @@ function regiment() {
 
     const attacker = regiment();
     const defender = pack.states[regSelected.dataset.state].military.find(r => r.i == regSelected.dataset.id);
+    console.log(attacker, defender)
     if (!attacker.batallions.length || !defender.batallions.length) {
       tip("Regiment has no troops to battle", false, "error");
       return;
