@@ -648,7 +648,8 @@ class Battle {
     this.attackers = new Side({regiments: [attacker], root:this.screenElement});
     this.attackers.element.classList.add("attacker");
     this.defenders.element.top="50%";
-    this.addCentralTurnButton();
+    this.ui={};
+    this.addButtons();
    // this.addHeaders();
    // this.doTurn();
     this.place = this.definePlace();
@@ -667,6 +668,42 @@ class Battle {
     return calculatedWidth;
 
   }
+/**
+ * Calls every buttonmaker method
+ */
+  addButtons(){
+    this.addCentralTurnButton();
+    //creates two div to contain the buttons and inputs, puts them on the two sides of the central turn button
+    const attackerDiv=document.createElement("div");
+    this.screenElement.appendChild(attackerDiv);
+    attackerDiv.classList.add("attackerInputs");
+    this.ui.attackerDiv=attackerDiv;
+    const defenderDiv=document.createElement("div");
+    defenderDiv.classList.add("defenderInputs");
+    this.screenElement.appendChild(defenderDiv);
+    this.ui.defenderDiv=defenderDiv;
+    this.addMoraleInputs();
+  }
+
+  /**Adds two number inputs that normally show the morale of each sides, and can set them when we enter a new value*/
+  addMoraleInputs(){
+    const attackerMorale=document.createElement("input");
+    attackerMorale.type="number";
+    attackerMorale.value=this.attackers.morale;
+    attackerMorale.addEventListener("change",()=>{
+      this.attackers.morale=attackerMorale.value;
+    });
+    this.ui.attackerDiv.appendChild(attackerMorale);
+    this.ui.attackerMorale=attackerMorale;
+    const defenderMorale=document.createElement("input");
+    defenderMorale.type="number";
+    defenderMorale.value=this.defenders.morale;
+    defenderMorale.addEventListener("change",()=>{
+      this.defenders.morale=defenderMorale.value;
+    });
+    this.ui.defenderDiv.appendChild(defenderMorale);
+    this.ui.defenderMorale=defenderMorale;
+  }
 
   addCentralTurnButton(){
     const button=document.createElement("button");
@@ -677,6 +714,7 @@ class Battle {
     button.style.top="50%";
     button.style.left="50%";
     button.style.transform="translate(-50%,-50%)";
+    this.ui.turnButton=button;
 
   }
 /**
@@ -737,6 +775,9 @@ class Battle {
     doTurn(){
       this.attackers.doTurn(this.defenders);
       this.defenders.doTurn(this.attackers);
+      console.log("TURN DONE",this.attackers,this.defenders);
+      this.ui.attackerMorale.value=this.attackers.morale;
+      this.ui.defenderMorale.value=this.defenders.morale;
     }
 
 

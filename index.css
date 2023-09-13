@@ -1608,6 +1608,20 @@ div.states > .riverType {
   z-index: 100;
   width: 800px !important;
   height: 600px !important;
+
+  .defenderInputs{
+    position:absolute;
+    top:50%;
+    left:25%;
+    transform:translate(50%,-50%);
+  }
+  .attackerInputs{
+    position:absolute;
+    top:50%;
+    left:75%;
+    transform:translate(50%,-50%);
+  }
+
 }
 .side{
   /*arranged into separate lines in their parent element*/
