@@ -90,6 +90,7 @@ class Side {
     this.totalMelee = this.getTotalMelee();
     this.totalShock = this.getTotalShock();
     this.tactic=this.getTactic();
+    this.luck=args.luck;
 
     this.deployBatallions();
 
@@ -99,19 +100,19 @@ class Side {
 
   createElements(){
     this.leftFlankElement=document.createElement("div");
-    this.leftFlankElement.classList.add("leftFlank");
+    this.leftFlankElement.classList.add("leftFlank",'zone');
     this.element.appendChild(this.leftFlankElement);
     this.rightFlankElement=document.createElement("div");
-    this.rightFlankElement.classList.add("rightFlank");
+    this.rightFlankElement.classList.add("rightFlank",'zone');
     this.element.appendChild(this.rightFlankElement);
     this.skirmishElement=document.createElement("div");
-    this.skirmishElement.classList.add("skirmish");
+    this.skirmishElement.classList.add("skirmish",'zone');
     this.element.appendChild(this.skirmishElement);
     this.frontlineElement=document.createElement("div");
-    this.frontlineElement.classList.add("frontline");
+    this.frontlineElement.classList.add("frontline",'zone');
     this.element.appendChild(this.frontlineElement);
     this.reservesElement=document.createElement("div");
-    this.reservesElement.classList.add("reserves");
+    this.reservesElement.classList.add("reserves",'zone');
     this.element.appendChild(this.reservesElement);
   }
 
@@ -243,9 +244,22 @@ getTotalMeleeOfRegiment(regiment){
    * 
    */
   deployBatallions(){
+    let sortedZones=Object.keys(this.tactic).sort((a,b)=>this.tactic[b]-this.tactic[a]);
+    sortedZones=sortedZones.filter(zone=>zone!=="name");
+    
+
+    //first we empty every zone and erase batallion placements
     this.allBatallions.forEach(batallion=>{
       batallion.assigned=false;
     });
+    for(let i=0;i<sortedZones.length;i++){
+      const zone=sortedZones[i];
+    this[zone]=[];
+    while( this[zone+"Element"].firstChild){
+      this[zone+"Element"].removeChild(this[zone+"Element"].firstChild);
+    }
+    }
+
     //every batallion get's a number for every zone, based on how well it fits the zone and how high the ratio of that batallion is
     const batallionsWithRatios=[];
     this.allBatallions.forEach(batallion=>{
@@ -260,8 +274,6 @@ getTotalMeleeOfRegiment(regiment){
       batallionsWithRatios.push({batallion:batallion,zones:zones});
     });
     //now go through the zones, in descending order of their ratios, and assign the best fitting batallions to them. If a batallion is already assigned, skip it.
-    let sortedZones=Object.keys(this.tactic).sort((a,b)=>this.tactic[b]-this.tactic[a]);
-    sortedZones=sortedZones.filter(zone=>zone!=="name");
     console.log("sortedZones: ",sortedZones, batallionsWithRatios);
     for(let i=0;i<sortedZones.length;i++){
       const zone=sortedZones[i];
@@ -574,10 +586,15 @@ attack(attacker,target,bonus,enemy){
   const attackerRoll=Math.floor(Math.random()*6)+1;
   const targetRoll=Math.floor(Math.random()*6)+1;
   const stat=attacker.assigned==="skirmish"?"skirmish":attacker.assigned==="fronline"?"melee":"shock";
-  const attackerDamage=Math.max(0,attackerRoll+attacker[stat]*bonus-target.armor)*attacker.strength/100;
-  const targetDamage=Math.max(0,targetRoll+target[stat]-attacker.armor)*target.strength/100;
+  const attackerDamage=this.luck/10*Math.max(0,attackerRoll+attacker[stat]*bonus-target.armor)*attacker.strength/100;
+  const targetDamage=enemy.luck/10*Math.max(0,targetRoll+target[stat]-attacker.armor)*target.strength/100;
   attacker.strength-=targetDamage;
   target.strength-=attackerDamage;
+  if(targetDamage>attackerDamage){
+    this.morale--;
+  }else{
+    enemy.morale--;
+  }
   if(isNaN(attacker.strength)){
     console.error("batallion strength is NaN",attacker);
     debugger;}
@@ -596,6 +613,7 @@ attack(attacker,target,bonus,enemy){
       return;
   }else if(stat==="skirmish"&&attackerDamage>=2*targetDamage){
     //move the target to it's regiment's reserves.
+    enemy.morale-=2;
     enemy.reserves.push(target);
     enemy[target.assigned].splice(enemy[target.assigned].indexOf(target),1);
   }
@@ -606,7 +624,7 @@ const regiment=side.regiments.find(regiment=>regiment.i===batallion.regiment);
 regiment.batallions.splice(regiment.batallions.indexOf(batallion),1);
 side[batallion.assigned].splice(side[batallion.assigned].indexOf(batallion),1);
 side.allBatallions.splice(side.allBatallions.indexOf(batallion),1);
-console.log("batallion removed",side,batallion);
+console.log("batallion removed",side,batallion,(100/side.allBatallions.length)+1);
 side.morale-=(100/side.allBatallions.length)+1;
 if(side.allBatallions.length===0){
   console.error("side has no batallions",side);
@@ -643,9 +661,11 @@ class Battle {
     console.log("BIOMES",biomesData,"CELL: ", this.cell);
     
     this.combatWidth=this.getCombatWidth();
-    
-    this.defenders =  new Side({regiments: [defender],root:this.screenElement});
-    this.attackers = new Side({regiments: [attacker], root:this.screenElement});
+    //random number between 0 and 20
+    const attackLuck=Math.floor(Math.random()*21);
+
+    this.defenders =  new Side({regiments: [defender],root:this.screenElement,luck:Math.floor(Math.random()*20)});
+    this.attackers = new Side({regiments: [attacker], root:this.screenElement,luck:Math.floor(Math.random()*20)});
     this.attackers.element.classList.add("attacker");
     this.defenders.element.top="50%";
     this.ui={};
@@ -683,6 +703,8 @@ class Battle {
     this.screenElement.appendChild(defenderDiv);
     this.ui.defenderDiv=defenderDiv;
     this.addMoraleInputs();
+    this.addTacticSelectors();
+    this.addLuckInputs();
   }
 
   /**Adds two number inputs that normally show the morale of each sides, and can set them when we enter a new value*/
@@ -705,6 +727,64 @@ class Battle {
     this.ui.defenderMorale=defenderMorale;
   }
 
+  /**Add dropdown selections for both sides that can change the tactics sides use and redeploys their troop */
+  addTacticSelectors(){
+    //tacticsmap are key value pairs of tactic names and their id's from the tactics array
+    const tacticsMap=new Map();
+    tactics.forEach((tactic,i)=>{
+      tacticsMap.set(tactic.name,i);
+    });
+    const attackerTacticSelector=document.createElement("select");
+    this.ui.attackerDiv.appendChild(attackerTacticSelector);
+    this.ui.attackerTacticSelector=attackerTacticSelector;
+    const defenderTacticSelector=document.createElement("select");
+    this.ui.defenderDiv.appendChild(defenderTacticSelector);
+    this.ui.defenderTacticSelector=defenderTacticSelector;
+    tactics.forEach(tactic=>{
+      const option=document.createElement("option");
+      option.value=tacticsMap.get(tactic.name);
+      option.innerHTML=tactic.name;
+      attackerTacticSelector.appendChild(option);
+    });
+    tactics.forEach(tactic=>{
+      const option=document.createElement("option");
+      option.value=tacticsMap.get(tactic.name);
+      option.innerHTML=tactic.name;
+      defenderTacticSelector.appendChild(option);
+    });
+    //The event listeners will set the tactic of the side to the selected tactic based on their id in the tactics array and redeploy the army
+    attackerTacticSelector.addEventListener("change",()=>{
+      this.attackers.tactic=tactics[attackerTacticSelector.value];
+      this.attackers.deployBatallions();
+    });
+    defenderTacticSelector.addEventListener("change",()=>{
+      this.defenders.tactic=tactics[defenderTacticSelector.value];
+      this.defenders.deployBatallions();
+    });
+
+
+  }
+
+  /**Adds a number input to the attacker and defender inputs */
+  addLuckInputs(){
+    const attackerLuck=document.createElement("input");
+    attackerLuck.type="number";
+    attackerLuck.value=this.attackers.luck;
+    attackerLuck.addEventListener("change",()=>{
+      this.attackers.luck=attackerLuck.value;
+    });
+    this.ui.attackerDiv.appendChild(attackerLuck);
+    this.ui.attackerLuck=attackerLuck;
+    const defenderLuck=document.createElement("input");
+    defenderLuck.type="number";
+    defenderLuck.value=this.defenders.luck;
+    defenderLuck.addEventListener("change",()=>{
+      this.defenders.luck=defenderLuck.value;
+    });
+    this.ui.defenderDiv.appendChild(defenderLuck);
+    this.ui.defenderLuck=defenderLuck;
+  }
+
   addCentralTurnButton(){
     const button=document.createElement("button");
     button.innerHTML="Next turn";
@@ -720,7 +800,6 @@ class Battle {
 /**
  * Updates the unitcounts and cloese the battle screen.
  * TODO: MOVE THE LOSING SIDE
- * TODO: update note of the regiment
  */
   endBattle(winner,loser){
     loser.regiments.forEach((regiment,i)=>{
@@ -733,8 +812,14 @@ class Battle {
       const id = "regiment" + regiment.state + "-" + regiment.i;
       armies.select(`g#${id} > text`).text(Military.getTotal(regiment)); // update reg box
     });
-    tip(`${this.name} is over.`, true, "success", 4000);
-    this.closeScreen();
+
+    this.ui.turnButton.innerHTML="End Battle";
+    this.ui.turnButton.removeEventListener("click",this.doTurn.bind(this));
+    this.ui.turnButton.addEventListener("click",()=>{
+      tip(`${this.name} is over.`, true, "success", 4000);
+      this.closeScreen();
+    });
+    
   }
 
   closeScreen() {
