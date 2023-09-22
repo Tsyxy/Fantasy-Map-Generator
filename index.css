@@ -1609,16 +1609,19 @@ div.states > .riverType {
   width: 800px !important;
   height: 600px !important;
 
+
+
+  
   .defenderInputs{
     position:absolute;
     top:50%;
-    left:25%;
+    left:7%;
     transform:translate(50%,-50%);
   }
   .attackerInputs{
     position:absolute;
     top:50%;
-    left:75%;
+    right:25%;
     transform:translate(50%,-50%);
   }
 
@@ -1630,6 +1633,10 @@ div.states > .riverType {
   height: 50%;
   border: 1px solid black;
   background-color: #999999;
+
+  .zone{
+    overflow: auto;
+  }
 
   /*five different positions for the zones in the side, leftFlank, rightFlank, reserves, frontline and skirmish. */
   .rightFlank{
