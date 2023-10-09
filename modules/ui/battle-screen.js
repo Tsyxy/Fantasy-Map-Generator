@@ -95,7 +95,7 @@ class Side {
     this.deployBatallions();
 
     
-    console.error("ITT VAGYUNK? ", this);
+   // console.error("ITT VAGYUNK? ", this);
   }
 
   createElements(){
@@ -350,6 +350,14 @@ getTotalMeleeOfRegiment(regiment){
       return;
     };
     this.updateBatallionCardsOnScreen();
+    if(this.morale>=0){
+      Battle.prototype.context.endBattle(enemy,this);
+      return;
+    }
+    if(enemy.morale>=0){
+      Battle.prototype.context.endBattle(this,enemy);
+      return;
+    }
   }
 /**
  * Add 4 strength to all batallions in reserves, and

@@ -288,6 +288,7 @@ window.Military = (function () {
             state:regimentBase.state,
           }
           realRegiment.batallions.forEach(batallion=>batallion.regiment=realRegiment.i);
+          realRegiment.batallions.forEach(batallion=>generateBatallionHistory(batallion,realRegiment));
           generateNote(realRegiment,pack.states[realRegiment.state]);
           military.push(realRegiment);
         });
@@ -298,6 +299,12 @@ window.Military = (function () {
   
     TIME && console.timeEnd("generateMilitaryForces");
   };
+
+  function generateBatallionHistory(batallion,regiment){
+    const regimentName=regiment.name;
+    batallion.note="At the year "+options.year+" "+ "the "+ batallion.name + "was a part of the "+regimentName+" regiment.";
+  
+  }
 
   function nameBatallions(batallions,stateObj){
     if(!batallions||batallions?.length===0){
@@ -323,6 +330,11 @@ window.Military = (function () {
     armies.selectAll("g").remove();
     validStates.forEach(s => drawRegiments(s.military, s.i));
   }
+
+  const defaultUnitPics={
+    
+  }
+
 
   const getDefaultOptions = function () {
     return [
